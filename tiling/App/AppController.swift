@@ -97,6 +97,7 @@ final class AppController {
     @ObservationIgnored private var pendingPids: Set<pid_t> = []
     @ObservationIgnored private var followUps: Set<pid_t> = []
     @ObservationIgnored private var lastActiveApp: pid_t?
+    @ObservationIgnored private var lastCheckedFocus: WindowID?
     @ObservationIgnored private var suspectedMinimums: [WindowID: CGSize] = [:]
     @ObservationIgnored private var pendingAll = false
     @ObservationIgnored private var refreshScheduled = false
@@ -455,7 +456,7 @@ final class AppController {
             focusedApp: focusedOtherApp(), existing: Self.existingWindows())
         show(state.reconcile(snapshot, context: context))
         apply(context: context)
-        restoreStacksIfTheActiveAppChanged(context: context)
+        restoreCoveredStacks(context: context)
         if let display = pendingShownFocus {
             pendingShownFocus = nil
             focusShowingWindow(on: visibleKey(display))
@@ -467,16 +468,22 @@ final class AppController {
         return app?.processIdentifier == getpid() ? nil : app?.bundleIdentifier
     }
 
-    private func restoreStacksIfTheActiveAppChanged(context: TilingContext) {
+    /// Runs on every change of app or window: moving between windows of one app can also bring all
+    /// of its windows forward.
+    private func restoreCoveredStacks(context: TilingContext) {
         guard let app = NSWorkspace.shared.frontmostApplication else { return }
         let pid = app.processIdentifier
-        guard pid != lastActiveApp else { return }
+        guard pid != lastActiveApp || state.focused != lastCheckedFocus else { return }
         lastActiveApp = pid
-        raiseCoveredStacks(appName: app.bundleIdentifier ?? "pid.\(pid)", context: context)
-        // The app may still be bringing its windows forward.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-            guard let self, self.isOperating else { return }
-            self.raiseCoveredStacks(appName: app.bundleIdentifier ?? "pid.\(pid)", context: self.context())
+        lastCheckedFocus = state.focused
+        let name = app.bundleIdentifier ?? "pid.\(pid)"
+        raiseCoveredStacks(appName: name, context: context)
+        // The app may still be bringing its windows forward, and some apps take their time.
+        for delay in [0.15, 0.4] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.isOperating, self.lastActiveApp == pid else { return }
+                self.raiseCoveredStacks(appName: name, context: self.context())
+            }
         }
     }
 

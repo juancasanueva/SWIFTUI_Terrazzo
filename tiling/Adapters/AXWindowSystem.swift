@@ -210,7 +210,10 @@ final class AXWindowSystem {
             AXUIElementSetAttributeValue(record.element, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
         }
         let app = AXUIElementCreateApplication(record.pid)
-        AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        // Activating an app brings all its windows forward, so don't do it when it is already in front.
+        if NSWorkspace.shared.frontmostApplication?.processIdentifier != record.pid {
+            AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        }
         AXUIElementSetAttributeValue(record.element, kAXMainAttribute as CFString, kCFBooleanTrue)
         AXUIElementSetAttributeValue(app, kAXFocusedWindowAttribute as CFString, record.element)
         AXUIElementPerformAction(record.element, kAXRaiseAction as CFString)
