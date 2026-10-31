@@ -29,6 +29,8 @@ struct TilingPolicy: Equatable, Sendable {
     var gap: CGFloat = 8
     var whenFull: FullScreenBehavior = .stack
     var movingIntoFull: MoveIntoFullBehavior = .swap
+    /// How far one resize press moves an edge, as a fraction of the screen.
+    var resizeStep: CGFloat = 0.05
 
     init(
         gap: CGFloat = 8, whenFull: FullScreenBehavior = .stack, movingIntoFull: MoveIntoFullBehavior = .swap
@@ -698,8 +700,8 @@ struct TilingState: Equatable {
     mutating func step(_ id: WindowID, grow: Bool, context: TilingContext) -> [Notice] {
         let result = withResizeTarget(id, context: context) { state, key, slot, area, kind, count, minimums in
             LayoutEngine.step(
-                slot: slot, grow: grow, kind: kind, count: count, area: area, main: context.policy.main,
-                gap: context.policy.gap, minimums: minimums,
+                slot: slot, grow: grow, fraction: context.policy.resizeStep, kind: kind, count: count, area: area,
+                main: context.policy.main, gap: context.policy.gap, minimums: minimums,
                 overrides: &state.workspaces[key, default: Workspace()].overrides)
         }
         guard result == .changed else { return [grow ? .maximumSize : .minimumSize] }
@@ -728,8 +730,8 @@ struct TilingState: Equatable {
         guard hasNeighbor || Self.neighbor(of: frame, in: others, direction: opposite) != nil else {
             return [.maximumSize]
         }
-        let dx = area.width * LayoutEngine.stepFraction
-        let dy = area.height * LayoutEngine.stepFraction
+        let dx = area.width * context.policy.resizeStep
+        let dy = area.height * context.policy.resizeStep
         var deltas = EdgeDeltas()
         switch (direction, hasNeighbor) {
         case (.right, true): deltas.maxX = dx

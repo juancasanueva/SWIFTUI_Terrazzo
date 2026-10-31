@@ -77,7 +77,6 @@ enum LayoutEngine {
     static let usableSize = CGSize(width: 450, height: 320)
     /// Smallest size a window can be dragged or stepped to, whatever the app allows.
     static let resizeFloor = CGSize(width: 240, height: 140)
-    static let stepFraction: CGFloat = 0.05
 
     // MARK: Shapes
 
@@ -356,12 +355,12 @@ enum LayoutEngine {
     }
 
     static func step(
-        slot: Int, grow: Bool, kind: LayoutKind, count: Int, area: CGRect, main: MainSize, gap: CGFloat,
+        slot: Int, grow: Bool, fraction: CGFloat = 0.05, kind: LayoutKind, count: Int, area: CGRect, main: MainSize, gap: CGFloat,
         minimums: [Int: CGSize], overrides: inout SizeOverrides
     ) -> StepResult {
         let sign: CGFloat = grow ? 1 : -1
-        let dx = area.width * stepFraction * sign
-        let dy = area.height * stepFraction * sign
+        let dx = area.width * fraction * sign
+        let dy = area.height * fraction * sign
         let moved = moveEdges(
             slot: slot, kind: kind, count: count, area: area, main: main, gap: gap, minimums: minimums,
             deltas: EdgeDeltas(minX: -dx, maxX: dx, minY: -dy, maxY: dy), overrides: &overrides)

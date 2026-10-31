@@ -44,7 +44,7 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 | ⌃⌥] ⌃⌥[ | Activate next / previous window |
 | ⌃⌥\` ⌃⌥⇧\` | Next / previous window in this tile |
 | ⌥⇥ ⌥⇧⇥ | Tab View |
-| ⌃⌥ ←→↑↓ | Resize: move the window's edge that way. The edge on that side if it has a neighbor there, otherwise the opposite edge, so the window shrinks |
+| ⌃⌥ ←→↑↓ | Resize: move the window's edge that way. The edge on that side if it has a neighbor there, otherwise the opposite edge, so the window shrinks. Each press moves `resizeStep` percent of the screen: 5 by default, from 0.5 to 25, in `settings.json` or Settings → Layout |
 | ⌃⌥0 | Reset sizes |
 | ⌃⌥F ⌃⌥⇧F | Float / always float this app |
 | ⌃⌥Z | Focus mode |

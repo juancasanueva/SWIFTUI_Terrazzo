@@ -687,6 +687,7 @@ final class AppController {
         policy.kindIsChosen = settings.layout != nil
         policy.count = settings.windowsPerScreen
         policy.main = settings.mainSize
+        policy.resizeStep = settings.resolvedResizeStep
         let learned = rules.learnedMinimums
         let screens = displays.map { display -> ScreenGeometry in
             let edges = settings.screenEdgesByDisplay[display.uuid] ?? settings.screenEdges

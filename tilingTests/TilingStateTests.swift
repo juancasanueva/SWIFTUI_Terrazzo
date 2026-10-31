@@ -669,6 +669,22 @@ struct TilingStateTests {
         #expect(frames.first { $0.id == 3 }?.frame.width == 544)
     }
 
+    @Test func theStepSizeComesFromThePolicy() {
+        var ctx = context()
+        ctx.policy.resizeStep = 0.025
+        var state = filled([1, 2], context: ctx)
+        _ = state.nudge(1, direction: .right, context: ctx)
+        #expect(peek(state, ctx).placements.first { $0.id == 1 }?.frame.width == 1008)
+    }
+
+    @Test func biggerAndSmallerUseTheSameStep() {
+        var ctx = context()
+        ctx.policy.resizeStep = 0.025
+        var state = filled([1, 2], context: ctx)
+        _ = state.step(1, grow: true, context: ctx)
+        #expect(peek(state, ctx).placements.first { $0.id == 1 }?.frame.width == 1008)
+    }
+
     @Test func aWindowWithNoNeighborsReportsTheLimit() {
         var state = filled([1])
         #expect(state.nudge(1, direction: .right, context: context()) == [.maximumSize])

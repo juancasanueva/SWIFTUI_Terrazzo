@@ -20,6 +20,28 @@ struct ConfigTests {
                 == "/Users/me/.config/tiling")
     }
 
+    @Test func resizeStepDefaultsToFivePercent() {
+        #expect(AppSettings().resizeStep == 5)
+        #expect(AppSettings().resolvedResizeStep == 0.05)
+        #expect(TilingPolicy().resizeStep == 0.05)
+    }
+
+    @Test func aHandEditedResizeStepIsKeptInARange() {
+        var settings = AppSettings()
+        settings.resizeStep = 0
+        #expect(settings.resolvedResizeStep == 0.005)
+        settings.resizeStep = 90
+        #expect(settings.resolvedResizeStep == 0.25)
+        settings.resizeStep = 1
+        #expect(settings.resolvedResizeStep == 0.01)
+    }
+
+    @Test func resizeStepLoadsFromAPartialFile() throws {
+        let url = try temporaryDirectory().appendingPathComponent("settings.json")
+        try Data(#"{"resizeStep": 2}"#.utf8).write(to: url)
+        #expect(try ConfigFile(url: url, defaults: AppSettings()).load().resizeStep == 2)
+    }
+
     @Test func missingFileYieldsDefaults() throws {
         let file = ConfigFile<AppSettings>(url: try temporaryDirectory().appendingPathComponent("settings.json"), defaults: AppSettings())
         #expect(try file.load() == AppSettings())

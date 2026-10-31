@@ -57,6 +57,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     var layout: LayoutKind?
     var windowsPerScreen = 3
     var mainSize: MainSize = .half
+    /// How far one press of the resize keys moves an edge, as a percentage of the screen.
+    var resizeStep: Double = 5
     var whenFull: FullScreenBehavior = .stack
     var movingIntoFull: MoveIntoFullBehavior = .swap
     var gap: Double = 8
@@ -77,6 +79,15 @@ struct AppSettings: Codable, Equatable, Sendable {
     var language: String?
     var openAtLogin = true
     var iconStyle: IconStyle = .washi
+}
+
+extension AppSettings {
+    static let resizeStepRange = 0.5...25.0
+
+    /// The step as a fraction of the screen, within range whatever was typed into the config.
+    var resolvedResizeStep: CGFloat {
+        CGFloat(min(max(resizeStep, Self.resizeStepRange.lowerBound), Self.resizeStepRange.upperBound) / 100)
+    }
 }
 
 /// `~/.config/tiling/apps.json`

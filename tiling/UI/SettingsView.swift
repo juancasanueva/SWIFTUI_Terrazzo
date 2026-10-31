@@ -111,6 +111,12 @@ private struct LayoutSettings: View {
                     Text("Swap").tag(MoveIntoFullBehavior.swap)
                     Text("Stack on top").tag(MoveIntoFullBehavior.stackOnTop)
                 }
+                LabeledContent("Resize step") {
+                    HStack {
+                        Slider(value: $controller.settings.resizeStep, in: AppSettings.resizeStepRange, step: 0.5)
+                        Text(verbatim: String(format: "%g%%", controller.settings.resizeStep)).monospacedDigit()
+                    }
+                }
                 LabeledContent("Spacing") {
                     HStack {
                         Slider(value: $controller.settings.gap, in: 0...32, step: 1)
