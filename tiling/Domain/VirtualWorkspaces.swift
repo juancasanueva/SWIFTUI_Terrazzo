@@ -53,8 +53,9 @@ struct VirtualWorkspaces: Equatable {
     }
 
     /// Follows connected displays and pins. A display without a workspace returns to the one it showed
-    /// last, else its lowest pinned one, else the lowest not in use.
-    mutating func sync(displays: [String]) {
+    /// last, else its lowest pinned one, else the lowest not in use. `occupied` names the display holding
+    /// each workspace that has windows: taking one of those would leave its windows parked out of reach.
+    mutating func sync(displays: [String], occupied: [Int: String] = [:]) {
         remembered.merge(visible) { _, current in current }
         connected = Set(displays)
         visible = visible.filter { display, number in
@@ -62,7 +63,9 @@ struct VirtualWorkspaces: Equatable {
         }
         for display in displays where visible[display] == nil {
             func usable(_ number: Int) -> Bool {
-                self.display(showing: number) == nil && (pinnedDisplay(of: number) ?? display) == display
+                guard self.display(showing: number) == nil else { return false }
+                if let pin = pinnedDisplay(of: number) { return pin == display }
+                return (occupied[number] ?? display) == display
             }
             let chosen =
                 remembered[display].flatMap { usable($0) ? $0 : nil }

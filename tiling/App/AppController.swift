@@ -460,7 +460,13 @@ final class AppController {
         updated.setPins(
             VirtualWorkspaces.resolvePins(
                 settings.workspaceDisplays, displays: displays.map { ($0.uuid, $0.name) }))
-        updated.sync(displays: displays.map(\.uuid))
+        var occupied: [Int: String] = [:]
+        for (key, workspace) in state.workspaces
+        where !workspace.tiles.isEmpty && key.space == spaces.activeSpace(ofDisplay: key.display)
+            && displays.contains(where: { $0.uuid == key.display }) {
+            occupied[key.virtual] = key.display
+        }
+        updated.sync(displays: displays.map(\.uuid), occupied: occupied)
         if updated != workspaceMap { workspaceMap = updated }
         bringWorkspacesToPinnedDisplays(displays: displays)
     }

@@ -155,6 +155,42 @@ struct VirtualWorkspacesTests {
         #expect(map.number(on: "B") == 2)
     }
 
+    @Test func aReconnectingDisplayLeavesAWorkspaceWithWindowsElsewhereAlone() {
+        var map = synced(["A", "B"])
+        map.sync(displays: ["A"])
+        _ = map.show(2, focusedDisplay: "A", isEmpty: true)
+        _ = map.show(1, focusedDisplay: "A", isEmpty: true)
+        map.sync(displays: ["A", "B"], occupied: [2: "A"])
+        #expect(map.number(on: "B") != 2)
+        #expect(map.number(on: "B") != 1)
+        #expect(map.show(2, focusedDisplay: "A", isEmpty: false) == "A")
+        #expect(map.number(on: "A") == 2)
+    }
+
+    @Test func aNewDisplayDoesNotTakeAWorkspaceInUseAfterVisitingAllNine() {
+        var map = synced(["A"])
+        for number in VirtualWorkspaces.numbers { _ = map.show(number, focusedDisplay: "A", isEmpty: true) }
+        _ = map.show(1, focusedDisplay: "A", isEmpty: true)
+        map.sync(displays: ["A", "B"], occupied: [1: "A", 2: "A"])
+        let number = map.number(on: "B")
+        #expect(number != 1 && number != 2)
+        #expect(map.show(2, focusedDisplay: "B", isEmpty: false) == "A")
+    }
+
+    @Test func aDisplayReturnsToItsOwnWorkspaceWithWindows() {
+        var map = synced(["A", "B"])
+        map.sync(displays: ["A"], occupied: [2: "B"])
+        map.sync(displays: ["A", "B"], occupied: [2: "B"])
+        #expect(map.number(on: "B") == 2)
+    }
+
+    @Test func aPinStillWinsOverWindowsOnAnotherDisplay() {
+        var map = VirtualWorkspaces()
+        map.setPins([7: "SAM"])
+        map.sync(displays: ["LG", "SAM"], occupied: [7: "LG"])
+        #expect(map.number(on: "SAM") == 7)
+    }
+
     @Test func aPinnedWorkspaceSavedBySettingsLoads() throws {
         var settings = AppSettings()
         settings.workspaceDisplays = ["1": "LG"]
