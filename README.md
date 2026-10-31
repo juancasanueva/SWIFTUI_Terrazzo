@@ -73,7 +73,7 @@ Shortcuts follow a key's physical position, and they apply in every app while Te
 | ⌥⌘-drag a window onto a tile | Add it to that stack |
 | Drag a window to another screen | Move it there, if there's room |
 | Drag a shared edge | Resize both sides |
-| Drag the bar between two windows | Resize both sides. It stands out when the pointer is on it |
+| Drag the white handle between two windows | Resize both sides. It stands out when the pointer is on it |
 | Click a bar above a stacked window | Show that window |
 | Rest the pointer on the bar | Open quick actions and window icons |
 
