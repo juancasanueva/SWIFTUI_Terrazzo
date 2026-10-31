@@ -126,7 +126,7 @@ private struct TourView: View {
                 shortcutLine("⌃⇧ ← → ↑ ↓", "Swap windows")
                 shortcutLine("⌃ 1–9", "Switch workspace")
                 shortcutLine("⌃⌥↩", "Make the active window primary")
-                shortcutLine("⌃⌥Z", "Focus mode")
+                shortcutLine("⌃F", "Focus mode")
                 shortcutLine("⌃⌥D", "No peek mode")
                 shortcutLine("⌃⌥P", "Clean Space")
                 shortcutLine("⌥⇥", "Tab View")

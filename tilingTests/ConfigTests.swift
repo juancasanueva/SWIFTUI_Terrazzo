@@ -136,6 +136,14 @@ struct ConfigTests {
         #expect(map.combo(for: .resetSizes)?.symbols == "⌃⌥0")
     }
 
+    @Test func focusModeUsesControlFWhateverThePrefix() {
+        var map = ShortcutMap()
+        #expect(map.combo(for: .focus)?.symbols == "⌃F")
+        map.prefix = .optionCommand
+        #expect(map.combo(for: .focus)?.symbols == "⌃F")
+        #expect(map.combo(for: .float)?.symbols == "⌥⌘F")
+    }
+
     @Test func directionalFocusDefaultsToControlArrowsWhateverThePrefix() {
         var map = ShortcutMap()
         #expect(map.combo(for: .focusLeft)?.symbols == "⌃←")
@@ -221,6 +229,6 @@ struct ConfigTests {
         try Data(#"{"bindings": {"retile": "ctrl+opt+t"}}"#.utf8).write(to: url)
         let map = try ConfigFile(url: url, defaults: ShortcutMap()).load()
         #expect(map.combo(for: .retile)?.symbols == "⌃⌥T")
-        #expect(map.combo(for: .focus)?.symbols == "⌃⌥Z")
+        #expect(map.combo(for: .focus)?.symbols == "⌃F")
     }
 }
