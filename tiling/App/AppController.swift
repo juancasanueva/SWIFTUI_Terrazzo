@@ -98,7 +98,7 @@ final class AppController {
     @ObservationIgnored private var followUps: Set<pid_t> = []
     @ObservationIgnored private var lastActiveApp: pid_t?
     @ObservationIgnored private var lastCheckedFocus: WindowID?
-    @ObservationIgnored private var suspectedMinimums: [WindowID: CGSize] = [:]
+    @ObservationIgnored private var refusals = RefusalTracker()
     @ObservationIgnored private var pendingAll = false
     @ObservationIgnored private var refreshScheduled = false
     @ObservationIgnored private var lastShowing: Set<WindowID> = []
@@ -721,7 +721,9 @@ final class AppController {
             guard let accepted = ax.setFrame(placement.id, to: placement.frame) else { continue }
             lastApplied[placement.id] = (placement.frame, accepted)
             moved += 1
-            if learnMinimum(id: placement.id, requested: placement.frame, accepted: accepted) {
+            if learnMinimum(
+                id: placement.id, requested: placement.frame, accepted: accepted, previous: live, context: context)
+            {
                 learnedNewMinimum = true
             }
         }
@@ -754,37 +756,31 @@ final class AppController {
             && abs(a.height - b.height) < 1.5
     }
 
-    /// Records a size the app refused to go below. Small differences are grid rounding, as in terminals.
-    /// A single refusal proves nothing: the app may be animating or mid-drag. It must refuse the same
-    /// way again shortly after before the size is remembered.
-    private func learnMinimum(id: WindowID, requested: CGRect, accepted: CGRect) -> Bool {
-        guard let app = state.apps[id] else { return false }
-        let tolerance: CGFloat = 24
-        let refusedWidth = accepted.width > requested.width + tolerance
-        let refusedHeight = accepted.height > requested.height + tolerance
-        guard refusedWidth || refusedHeight else {
-            suspectedMinimums[id] = nil
+    /// Records a size the app really refuses to go below.
+    private func learnMinimum(
+        id: WindowID, requested: CGRect, accepted: CGRect, previous: CGRect, context: TilingContext
+    ) -> Bool {
+        guard let app = state.apps[id], NSEvent.pressedMouseButtons == 0,
+            let key = state.key(of: id), let area = state.area(of: key, context: context)
+        else { return false }
+        switch refusals.note(
+            id: id, requested: requested, accepted: accepted, previous: previous, area: area, now: Date())
+        {
+        case .none:
             return false
-        }
-        guard NSEvent.pressedMouseButtons == 0 else { return false }
-        if let suspected = suspectedMinimums[id], abs(suspected.width - accepted.width) < 2,
-            abs(suspected.height - accepted.height) < 2 {
-            suspectedMinimums[id] = nil
-        } else {
-            suspectedMinimums[id] = accepted.size
+        case .checkAgain(let delay):
             lastApplied[id] = nil
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 self?.scheduleRefresh(pid: nil)
             }
             return false
+        case .learn(let size):
+            let current = rules.learnedMinimums[app] ?? .zero
+            let updated = CGSize(width: max(current.width, size.width), height: max(current.height, size.height))
+            guard updated != current else { return false }
+            rules.learnedMinimums[app] = updated
+            return true
         }
-        let current = rules.learnedMinimums[app] ?? .zero
-        var updated = current
-        if refusedWidth { updated.width = max(current.width, accepted.width) }
-        if refusedHeight { updated.height = max(current.height, accepted.height) }
-        guard updated != current else { return false }
-        rules.learnedMinimums[app] = updated
-        return true
     }
 
     private func center(_ id: WindowID, context: TilingContext) {
