@@ -37,6 +37,9 @@ final class AppController {
     @ObservationIgnored private let watcher = ConfigWatcher()
     @ObservationIgnored private var isLoadingConfig = false
 
+    /// Becomes the real updater in `start()`.
+    var updater: any AppUpdating = NoUpdater()
+
     var settings = AppSettings() {
         didSet {
             guard settings != oldValue else { return }
@@ -132,6 +135,7 @@ final class AppController {
         guard !started else { return }
         started = true
         reloadConfig()
+        updater = SparkleUpdateChecker(automaticChecks: settings.automaticUpdateChecks)
         watcher.onChange = { [weak self] in self?.reloadConfig() }
         watcher.start(directory: directory)
         ax.onChange = { [weak self] pid in self?.windowsChanged(pid: pid) }
@@ -409,6 +413,7 @@ final class AppController {
     private func settingsChanged(from old: AppSettings) {
         if old.appearance != settings.appearance || old.iconStyle != settings.iconStyle { applyAppearance() }
         if old.openAtLogin != settings.openAtLogin { applyLoginItem() }
+        settings.applyUpdatePreference(changedFrom: old, to: updater)
         if old.hoverFocus != settings.hoverFocus { hoverFocus.update(enabled: settings.hoverFocus && isOperating) }
         if let language = settings.language, language != old.language {
             UserDefaults.standard.set([language], forKey: "AppleLanguages")

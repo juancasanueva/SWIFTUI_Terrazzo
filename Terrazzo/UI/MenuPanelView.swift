@@ -78,6 +78,8 @@ struct MenuPanelView: View {
             modes
             frontAppToggle
             Divider()
+            CheckForUpdatesButton(updater: controller.updater)
+                .controlSize(.small)
             footer
         }
         .padding(14)

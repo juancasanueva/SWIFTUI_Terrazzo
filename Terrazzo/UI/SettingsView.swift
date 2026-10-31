@@ -480,7 +480,7 @@ private struct AppsSettings: View {
 }
 
 private struct AboutSettings: View {
-    let controller: AppController
+    @Bindable var controller: AppController
     @State private var includeDiagnostics = true
 
     private var version: String {
@@ -493,6 +493,12 @@ private struct AboutSettings: View {
                 LabeledContent("Terrazzo", value: version)
                 LabeledContent("Config folder", value: ConfigDirectory.url().path)
                 Button("Open Config Folder") { NSWorkspace.shared.open(ConfigDirectory.url()) }
+            }
+            Section("Updates") {
+                Toggle("Automatically check for updates", isOn: $controller.settings.automaticUpdateChecks)
+                LabeledContent(UpdateCheckPresentation(lastCheck: controller.updater.lastUpdateCheckDate, now: .now).label) {
+                    CheckForUpdatesButton(updater: controller.updater)
+                }
             }
             Section {
                 Toggle("Include diagnostics", isOn: $includeDiagnostics)
@@ -515,5 +521,17 @@ private struct AboutSettings: View {
             lines.append("Learned apps: \(controller.rules.learnedMinimums.count)")
         }
         return lines.joined(separator: "\n")
+    }
+}
+
+/// Its own view so the panel and Settings re-render as the updater's state changes.
+struct CheckForUpdatesButton: View {
+    let updater: any AppUpdating
+
+    var isDisabled: Bool { !updater.canCheckForUpdates }
+
+    var body: some View {
+        Button("Check for Updates…", action: updater.checkForUpdates)
+            .disabled(isDisabled)
     }
 }

@@ -100,6 +100,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     var language: String?
     var openAtLogin = true
     var iconStyle: IconStyle = .terrazzo
+    /// Checking is network traffic, so it stays off until the user turns it on.
+    var automaticUpdateChecks = false
 }
 
 extension AppSettings {
