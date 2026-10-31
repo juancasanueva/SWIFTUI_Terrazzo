@@ -117,10 +117,19 @@ struct VirtualWorkspaces: Equatable {
 struct EmptyWorkspaceFocus: Equatable {
     private(set) var display: String?
     private var windowAtSwitch: WindowID?
+    /// Outlives a loss of focus: macOS can hand focus back to this window with no action from the user,
+    /// for example when the menu bar is revealed.
+    private var windowLeftBehind: WindowID?
 
     mutating func wentToEmpty(display: String, focused: WindowID?) {
         self.display = display
         windowAtSwitch = focused
+        windowLeftBehind = focused ?? windowLeftBehind
+    }
+
+    /// Whether focus landing on a parked window means going to its workspace.
+    func followsFocus(to window: WindowID) -> Bool {
+        display == nil || window != windowLeftBehind
     }
 
     mutating func focusObserved(window: WindowID?, isShown: Bool) {
@@ -135,5 +144,6 @@ struct EmptyWorkspaceFocus: Equatable {
     mutating func windowChosen() {
         display = nil
         windowAtSwitch = nil
+        windowLeftBehind = nil
     }
 }

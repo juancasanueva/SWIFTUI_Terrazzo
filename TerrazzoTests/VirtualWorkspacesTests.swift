@@ -107,6 +107,33 @@ struct VirtualWorkspacesTests {
         #expect(empty.display == nil)
     }
 
+    @Test func theWindowLeftBehindDoesNotPullBackAfterFocusWasLost() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.focusObserved(window: nil, isShown: false)
+        #expect(!empty.followsFocus(to: 5))
+        #expect(empty.followsFocus(to: 6))
+    }
+
+    @Test func theWindowLeftBehindIsKeptAcrossAnotherEmptyWorkspace() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.focusObserved(window: nil, isShown: false)
+        empty.wentToEmpty(display: "B", focused: nil)
+        #expect(!empty.followsFocus(to: 5))
+    }
+
+    @Test func focusIsFollowedAgainOnceAWindowIsChosen() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.windowChosen()
+        #expect(empty.followsFocus(to: 5))
+    }
+
+    @Test func focusIsFollowedWhenNotOnAnEmptyWorkspace() {
+        #expect(EmptyWorkspaceFocus().followsFocus(to: 5))
+    }
+
     @Test func choosingAWindowEndsIt() {
         var empty = EmptyWorkspaceFocus()
         empty.wentToEmpty(display: "B", focused: 5)

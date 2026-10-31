@@ -632,6 +632,7 @@ final class AppController {
     /// of focus counts, and not right after a switch, when the old window may still report focus.
     private func followFocusToWorkspace(_ focused: WindowID?) {
         guard let focused, focused != state.focused, Date().timeIntervalSince(lastWorkspaceSwitch) > 0.7,
+            emptyFocus.followsFocus(to: focused),
             let key = state.key(of: focused), isParked(focused, displays: Displays.current())
         else { return }
         // Closing a window hands focus to another of the app's windows, which may be parked. The user
