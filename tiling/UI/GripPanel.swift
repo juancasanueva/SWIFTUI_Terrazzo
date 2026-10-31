@@ -20,7 +20,10 @@ enum GripMetrics {
     static let dotTarget: CGFloat = 24
     static let spacing: CGFloat = 4
     static let chipIconSize: CGFloat = 36
-    static let expandedSize = CGSize(width: 440, height: 104)
+    static let expandedSize = CGSize(width: 440, height: 136)
+    static let actionIconSize: CGFloat = 26
+    static let actionWidth: CGFloat = 100
+    static let actionHeight: CGFloat = 66
     private static let sidePadding: CGFloat = 8
 
     struct Segment: Equatable {
@@ -36,6 +39,22 @@ enum GripMetrics {
             let isShowing = id == windows.first
             return Segment(id: id, isShowing: isShowing, width: isShowing ? showingWidth : waitingWidth)
         }
+    }
+
+    /// The keys for an action as they are now, or nothing when it has none.
+    static func shortcutText(for action: ShortcutAction, in map: ShortcutMap) -> String {
+        map.combo(for: action)?.symbols ?? ""
+    }
+
+    /// Moving past a screen edge has no key of its own: it is the move left and right keys.
+    static func screenMoveText(in map: ShortcutMap) -> String {
+        let left = map.combo(for: .swapLeft)
+        let right = map.combo(for: .swapRight)
+        if let left, let right, left.modifiers == right.modifiers {
+            let modifiers = KeyCombo(key: .left, modifiers: left.modifiers).symbols.dropLast()
+            return "\(modifiers) \(left.key.symbol) \(right.key.symbol)"
+        }
+        return [left?.symbols, right?.symbols].compactMap { $0 }.joined(separator: " ")
     }
 
     static func collapsedSize(count: Int, isActive: Bool) -> CGSize {
@@ -180,11 +199,18 @@ private struct HoverBar: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            HStack(spacing: 4) {
+            HStack(spacing: GripMetrics.spacing) {
                 if let active {
-                    action("star", "Make primary") { controller.makePrimaryWindow(active) }
-                    action("arrow.up.left.and.arrow.down.right", "Focus") { controller.toggleZoomWindow(active) }
-                    action("pin", "Float") { controller.toggleFloatWindow(active) }
+                    quickAction(
+                        "star", "Make primary", GripMetrics.shortcutText(for: .makePrimary, in: controller.shortcuts)
+                    ) { controller.makePrimaryWindow(active) }
+                    quickAction(
+                        "arrow.up.left.and.arrow.down.right", "Focus",
+                        GripMetrics.shortcutText(for: .focus, in: controller.shortcuts)
+                    ) { controller.toggleZoomWindow(active) }
+                    quickAction(
+                        "pin", "Float", GripMetrics.shortcutText(for: .float, in: controller.shortcuts)
+                    ) { controller.toggleFloatWindow(active) }
                     moveControl(active)
                 }
             }
@@ -213,19 +239,47 @@ private struct HoverBar: View {
     private func moveControl(_ id: WindowID) -> some View {
         let screens = controller.orderedScreens()
         if screens.count == 2 {
-            action("display.2", "Next screen") { controller.moveToNextScreen(id) }
+            quickAction("display.2", "Next screen", GripMetrics.screenMoveText(in: controller.shortcuts)) {
+                controller.moveToNextScreen(id)
+            }
         } else if screens.count > 2 {
             Menu {
                 ForEach(screens, id: \.key) { screen in
                     Button(screen.name) { controller.moveWindow(id, to: screen.key) }
                 }
             } label: {
-                Label("Move to", systemImage: "display.2").labelStyle(.iconOnly)
+                quickActionLabel("display.2", "Move to", GripMetrics.screenMoveText(in: controller.shortcuts))
             }
             .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
             .fixedSize()
-            .help(Text("Move to"))
         }
+    }
+
+    private func quickAction(
+        _ symbol: String, _ title: LocalizedStringKey, _ shortcut: String, perform: @escaping () -> Void
+    ) -> some View {
+        Button(action: perform) {
+            quickActionLabel(symbol, title, shortcut)
+        }
+        .buttonStyle(.borderless)
+    }
+
+    private func quickActionLabel(_ symbol: String, _ title: LocalizedStringKey, _ shortcut: String) -> some View {
+        VStack(spacing: 2) {
+            Image(systemName: symbol)
+                .font(.system(size: GripMetrics.actionIconSize * 0.75))
+                .frame(height: GripMetrics.actionIconSize)
+            Text(title)
+                .font(.caption)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text(verbatim: shortcut)
+                .font(.caption2.monospaced())
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: GripMetrics.actionWidth, height: GripMetrics.actionHeight)
+        .contentShape(Rectangle())
     }
 
     private func action(

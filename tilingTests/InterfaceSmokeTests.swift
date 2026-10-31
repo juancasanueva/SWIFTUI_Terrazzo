@@ -78,6 +78,33 @@ struct GripMetricsTests {
         }
     }
 
+    @Test func quickActionsShowTheCurrentShortcuts() {
+        var map = ShortcutMap()
+        #expect(GripMetrics.shortcutText(for: .makePrimary, in: map) == "⌃⌥↩")
+        #expect(GripMetrics.shortcutText(for: .focus, in: map) == "⌃F")
+        #expect(GripMetrics.shortcutText(for: .float, in: map) == "⌃T")
+        map.bindings[ShortcutAction.focus.rawValue] = "ctrl+shift+y"
+        #expect(GripMetrics.shortcutText(for: .focus, in: map) == "⌃⇧Y")
+        map.bindings[ShortcutAction.float.rawValue] = ShortcutMap.off
+        #expect(GripMetrics.shortcutText(for: .float, in: map) == "")
+    }
+
+    @Test func theNextScreenActionShowsTheMoveArrows() {
+        var map = ShortcutMap()
+        #expect(GripMetrics.screenMoveText(in: map) == "⌃⇧ ← →")
+        map.bindings[ShortcutAction.swapLeft.rawValue] = "ctrl+opt+h"
+        #expect(GripMetrics.screenMoveText(in: map) == "⌃⌥H ⌃⇧→")
+        map.bindings[ShortcutAction.swapRight.rawValue] = ShortcutMap.off
+        #expect(GripMetrics.screenMoveText(in: map) == "⌃⌥H")
+    }
+
+    @Test func theActionsBarFitsItsLargerActions() {
+        #expect(GripMetrics.actionIconSize >= 26)
+        let actions = GripMetrics.actionWidth * 4 + GripMetrics.spacing * 3
+        #expect(GripMetrics.expandedSize.width >= actions + 12)
+        #expect(GripMetrics.expandedSize.height >= GripMetrics.actionHeight + GripMetrics.chipIconSize + 30)
+    }
+
     @Test func theActionsBarWaitsAndItsIconsAreLarge() {
         #expect(GripMetrics.chipIconSize >= 36)
         #expect(GripMetrics.expandedSize.height >= GripMetrics.chipIconSize + 56)
