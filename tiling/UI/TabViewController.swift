@@ -1,0 +1,294 @@
+import AppKit
+import SwiftUI
+
+struct TabEntry: Identifiable, Equatable {
+    var id: WindowID
+    /// Position on the desktop, in window-system coordinates. Empty for minimized windows.
+    var frame: CGRect
+    var appName: String
+    var title: String
+    var pid: pid_t
+    var isMinimized: Bool
+}
+
+struct TabScreen: Identifiable, Equatable {
+    var id: String
+    var name: String
+    var frame: CGRect
+    var entries: [TabEntry]
+    var minimized: [TabEntry]
+}
+
+@Observable
+final class TabViewModel {
+    var screens: [TabScreen] = []
+    var selection: WindowID?
+    var onChoose: ((WindowID) -> Void)?
+
+    var ordered: [TabEntry] { screens.flatMap { $0.entries + $0.minimized } }
+}
+
+final class KeyablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
+/// Every window, screen by screen, while a modifier is held. Titles are read when it opens and
+/// dropped when it closes.
+final class TabViewController {
+    private unowned let controller: AppController
+    private let model = TabViewModel()
+    private var panel: KeyablePanel?
+    private var keyMonitor: Any?
+    private var releaseTimer: Timer?
+    private var heldModifiers: NSEvent.ModifierFlags = []
+
+    init(controller: AppController) {
+        self.controller = controller
+    }
+
+    private var isOpen: Bool { panel?.isVisible == true }
+
+    func pressed(backward: Bool) {
+        if isOpen {
+            advance(backward: backward)
+        } else {
+            open(backward: backward)
+        }
+    }
+
+    private func open(backward: Bool) {
+        model.screens = buildScreens()
+        let ordered = model.ordered
+        guard !ordered.isEmpty else { return }
+        let ids = Set(ordered.map(\.id))
+        let recent = controller.recentWindows.filter { ids.contains($0) }
+        model.selection = (recent.count > 1 ? recent[1] : recent.first) ?? ordered[0].id
+        model.onChoose = { [weak self] id in self?.commit(id) }
+
+        heldModifiers = Self.flags(controller.shortcuts.combo(for: .tabView)?.modifiers ?? .option)
+        let panel = self.panel ?? makePanel()
+        self.panel = panel
+        let display =
+            Displays.display(containing: Displays.pointerLocation(), in: Displays.current())?.visibleFrame ?? .zero
+        let size = TabViewContent.preferredSize(for: model.screens)
+        let frame = CGRect(
+            x: display.midX - size.width / 2, y: display.midY - size.height / 2, width: size.width,
+            height: size.height)
+        panel.setFrame(Displays.toAppKit(frame), display: true)
+        panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
+
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            self?.handle(event) == true ? nil : event
+        }
+        releaseTimer = Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkRelease() }
+        }
+    }
+
+    private func makePanel() -> KeyablePanel {
+        let panel = KeyablePanel(
+            contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.level = .modalPanel
+        panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle, .fullScreenAuxiliary]
+        panel.contentView = NSHostingView(rootView: TabViewContent(model: model))
+        return panel
+    }
+
+    private func buildScreens() -> [TabScreen] {
+        let context = controller.context()
+        let excludedRecords = controller.ax.scan(pid: nil)
+        return Displays.current().map { display in
+            let onScreen = excludedRecords.filter {
+                Displays.display(for: $0.frame, in: [display]) != nil
+                    && Displays.display(for: $0.frame, in: Displays.current())?.uuid == display.uuid
+            }
+            var entries: [TabEntry] = []
+            var minimized: [TabEntry] = []
+            var placed: Set<WindowID> = []
+
+            let key = context.screens.first { $0.key.display == display.uuid }?.key
+            if let key, let workspace = controller.state.workspaces[key] {
+                let frames = controller.state.slotFrames(on: key, context: context)
+                for (slot, tile) in workspace.tiles.enumerated() {
+                    guard let frame = frames[safe: slot] else { continue }
+                    // Stacked windows share their tile side by side, so each can be picked.
+                    let width = frame.width / CGFloat(tile.windows.count)
+                    for (index, id) in tile.windows.enumerated() {
+                        guard let record = controller.ax.record(id) else { continue }
+                        placed.insert(id)
+                        let part = CGRect(
+                            x: frame.minX + CGFloat(index) * width, y: frame.minY, width: width,
+                            height: frame.height)
+                        entries.append(entry(record, frame: part))
+                    }
+                }
+            }
+            for record in onScreen where !placed.contains(record.id) {
+                if record.isMinimized {
+                    minimized.append(entry(record, frame: .zero))
+                } else if record.isTileable {
+                    entries.append(entry(record, frame: record.frame))
+                }
+            }
+            return TabScreen(
+                id: display.uuid, name: display.name, frame: display.frame, entries: entries, minimized: minimized)
+        }
+        .filter { !$0.entries.isEmpty || !$0.minimized.isEmpty }
+    }
+
+    private func entry(_ record: WindowRecord, frame: CGRect) -> TabEntry {
+        TabEntry(
+            id: record.id, frame: frame, appName: record.appName, title: controller.ax.title(of: record.id),
+            pid: record.pid, isMinimized: record.isMinimized)
+    }
+
+    private func advance(backward: Bool) {
+        let ordered = model.ordered
+        guard let current = ordered.firstIndex(where: { $0.id == model.selection }) else { return }
+        let next = (current + (backward ? -1 : 1) + ordered.count) % ordered.count
+        model.selection = ordered[next].id
+    }
+
+    private func moveSelection(_ direction: Direction) {
+        let entries = model.screens.flatMap(\.entries)
+        guard let current = entries.first(where: { $0.id == model.selection }) else { return }
+        let frames = entries.map(\.frame)
+        if let index = TilingState.neighbor(of: current.frame, in: frames, direction: direction) {
+            model.selection = entries[index].id
+        }
+    }
+
+    private func handle(_ event: NSEvent) -> Bool {
+        switch event.keyCode {
+        case 53:
+            close()
+        case 36:
+            if let selection = model.selection { commit(selection) }
+        case 48:
+            advance(backward: event.modifierFlags.contains(.shift))
+        case 123:
+            moveSelection(.left)
+        case 124:
+            moveSelection(.right)
+        case 125:
+            moveSelection(.down)
+        case 126:
+            moveSelection(.up)
+        default:
+            return false
+        }
+        return true
+    }
+
+    private func checkRelease() {
+        let current = NSEvent.modifierFlags.intersection([.control, .option, .command])
+        let needed = heldModifiers.intersection([.control, .option, .command])
+        guard current.intersection(needed).isEmpty, !needed.isEmpty else { return }
+        if let selection = model.selection {
+            commit(selection)
+        } else {
+            close()
+        }
+    }
+
+    private func commit(_ id: WindowID) {
+        close()
+        controller.showWindow(id)
+    }
+
+    private func close() {
+        releaseTimer?.invalidate()
+        releaseTimer = nil
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
+        panel?.orderOut(nil)
+        model.screens = []
+        model.selection = nil
+    }
+
+    private static func flags(_ modifiers: KeyModifiers) -> NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if modifiers.contains(.control) { flags.insert(.control) }
+        if modifiers.contains(.option) { flags.insert(.option) }
+        if modifiers.contains(.command) { flags.insert(.command) }
+        return flags
+    }
+}
+
+private struct TabViewContent: View {
+    @Bindable var model: TabViewModel
+
+    private static let screenWidth: CGFloat = 460
+
+    static func preferredSize(for screens: [TabScreen]) -> CGSize {
+        let width = CGFloat(screens.count) * (screenWidth + 16) + 32
+        let tallest = screens.map { screenHeight($0) }.max() ?? 280
+        return CGSize(width: width, height: tallest + 100)
+    }
+
+    private static func screenHeight(_ screen: TabScreen) -> CGFloat {
+        screenWidth * screen.frame.height / max(screen.frame.width, 1)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            ForEach(model.screens) { screen in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(screen.name).font(.caption).foregroundStyle(.secondary)
+                    desktop(screen)
+                    if !screen.minimized.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(screen.minimized) { entry in
+                                card(entry).frame(width: 120, height: 40)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func desktop(_ screen: TabScreen) -> some View {
+        let scale = Self.screenWidth / max(screen.frame.width, 1)
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06))
+            ForEach(screen.entries) { entry in
+                card(entry)
+                    .frame(width: max(entry.frame.width * scale - 4, 40), height: max(entry.frame.height * scale - 4, 30))
+                    .offset(
+                        x: (entry.frame.minX - screen.frame.minX) * scale + 2,
+                        y: (entry.frame.minY - screen.frame.minY) * scale + 2)
+            }
+        }
+        .frame(width: Self.screenWidth, height: Self.screenHeight(screen))
+        .clipped()
+    }
+
+    private func card(_ entry: TabEntry) -> some View {
+        VStack(spacing: 2) {
+            if let icon = NSRunningApplication(processIdentifier: entry.pid)?.icon {
+                Image(nsImage: icon).resizable().frame(width: 24, height: 24)
+            }
+            Text(entry.appName).font(.caption.weight(.semibold)).lineLimit(1)
+            Text(entry.title).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .padding(4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
+        .overlay {
+            if model.selection == entry.id {
+                RoundedRectangle(cornerRadius: 6).stroke(Color.orange, lineWidth: 2)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { model.onChoose?(entry.id) }
+    }
+}

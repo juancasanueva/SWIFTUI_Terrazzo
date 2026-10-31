@@ -1,8 +1,33 @@
+import AppKit
 import SwiftUI
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Unit tests run inside this app; they must not touch real windows or shortcuts.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        let controller = AppController.shared
+        controller.start()
+        if !controller.settings.setupFinished {
+            TourWindow.show(controller: controller)
+        }
+    }
+}
 
 @main
 struct TilingApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    private let controller = AppController.shared
+
     var body: some Scene {
-        Settings { EmptyView() }
+        MenuBarExtra {
+            MenuPanelView(controller: controller)
+        } label: {
+            MenuBarIcon(controller: controller)
+        }
+        .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView(controller: controller)
+        }
     }
 }

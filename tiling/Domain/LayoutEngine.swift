@@ -98,7 +98,7 @@ enum LayoutEngine {
             case 1: slots = [[0]]
             case 2: slots = [[0], [1]]
             case 3: slots = [[0], [1, 2]]
-            default: slots = [[0, 3], [1, 2]]
+            default: slots = [[0, 3], [1, 2] + Array(4..<max(n, 4))]
             }
             sharedTrackKey = true
         case .columns:

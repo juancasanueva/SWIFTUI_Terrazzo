@@ -1,0 +1,450 @@
+import AppKit
+import SwiftUI
+
+struct SettingsView: View {
+    @Bindable var controller: AppController
+
+    var body: some View {
+        TabView {
+            GeneralSettings(controller: controller).tabItem { Label("General", systemImage: "gearshape") }
+            LayoutSettings(controller: controller).tabItem { Label("Layout", systemImage: "square.grid.2x2") }
+            HighlightSettings(controller: controller).tabItem { Label("Highlight", systemImage: "sparkles") }
+            KeyboardSettings(controller: controller).tabItem { Label("Keyboard", systemImage: "keyboard") }
+            AppsSettings(controller: controller).tabItem { Label("Apps", systemImage: "app.badge") }
+            AboutSettings(controller: controller).tabItem { Label("About", systemImage: "info.circle") }
+        }
+        .frame(width: 560, height: 560)
+        .onAppear { NSApp.activate() }
+    }
+}
+
+private struct GeneralSettings: View {
+    @Bindable var controller: AppController
+    @State private var needsRestart = false
+
+    private static let languages: [(code: String?, name: String)] = [
+        (nil, String(localized: "Match the Mac")), ("en", "English"), ("es", "Español"), ("ja", "日本語"),
+        ("ko", "한국어"), ("zh-Hans", "简体中文"),
+    ]
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Language", selection: $controller.settings.language) {
+                    ForEach(Self.languages, id: \.code) { Text($0.name).tag($0.code) }
+                }
+                .onChange(of: controller.settings.language) { needsRestart = true }
+                if needsRestart {
+                    Button("Restart Now", action: restart)
+                }
+                Picker("Appearance", selection: $controller.settings.appearance) {
+                    Text("Match the Mac").tag(AppearanceChoice.system)
+                    Text("Light").tag(AppearanceChoice.light)
+                    Text("Dark").tag(AppearanceChoice.dark)
+                }
+                Toggle("Open at login", isOn: $controller.settings.openAtLogin)
+                Picker("Clean Space background", selection: $controller.settings.cleanBackground) {
+                    Text("Graphite").tag(CleanBackground.graphite)
+                    Text("Mist").tag(CleanBackground.mist)
+                    Text("Stone").tag(CleanBackground.stone)
+                }
+                Picker("App icon", selection: $controller.settings.iconStyle) {
+                    ForEach(IconStyle.allCases, id: \.self) { style in
+                        Text(style.rawValue.capitalized).tag(style)
+                    }
+                }
+            }
+            Section {
+                LabeledContent("Permission") {
+                    HStack {
+                        Text(controller.isTrusted ? "Accessibility allowed" : "Accessibility needed")
+                        if !controller.isTrusted {
+                            Button("Grant Access") { AXWindowSystem.requestTrust() }
+                        }
+                    }
+                }
+                Button("Open Tour") { TourWindow.show(controller: controller) }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func restart() {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-n", Bundle.main.bundlePath]
+        try? process.run()
+        NSApp.terminate(nil)
+    }
+}
+
+private struct LayoutSettings: View {
+    @Bindable var controller: AppController
+    @State private var edgeScope = "all"
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Layout", selection: $controller.settings.layout) {
+                    Text("Automatic").tag(LayoutKind?.none)
+                    ForEach(LayoutKind.allCases, id: \.self) { Text($0.title).tag(LayoutKind?.some($0)) }
+                }
+                Picker("Main window size", selection: $controller.settings.mainSize) {
+                    Text("Half").tag(MainSize.half)
+                    Text("60%").tag(MainSize.sixty)
+                    Text("Two-thirds").tag(MainSize.twoThirds)
+                }
+                Stepper(
+                    "Windows per screen: \(controller.settings.windowsPerScreen)",
+                    value: $controller.settings.windowsPerScreen, in: 1...5)
+                Picker("When a screen is full", selection: $controller.settings.whenFull) {
+                    Text("Stack on top").tag(FullScreenBehavior.stack)
+                    Text("Float in the middle").tag(FullScreenBehavior.floatInMiddle)
+                }
+                Picker("Moving into a full screen", selection: $controller.settings.movingIntoFull) {
+                    Text("Swap").tag(MoveIntoFullBehavior.swap)
+                    Text("Stack on top").tag(MoveIntoFullBehavior.stackOnTop)
+                }
+                LabeledContent("Spacing") {
+                    HStack {
+                        Slider(value: $controller.settings.gap, in: 0...32, step: 1)
+                        Text("\(Int(controller.settings.gap)) pt").monospacedDigit()
+                    }
+                }
+            }
+            Section("Screen edges") {
+                Picker("Apply to", selection: $edgeScope) {
+                    Text("All screens").tag("all")
+                    ForEach(Displays.current(), id: \.uuid) { Text($0.name).tag($0.uuid) }
+                }
+                edgeSlider("Top", \.top)
+                edgeSlider("Left", \.left)
+                edgeSlider("Bottom", \.bottom)
+                edgeSlider("Right", \.right)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func edgeSlider(_ title: LocalizedStringKey, _ edge: WritableKeyPath<ScreenEdges, CGFloat>) -> some View {
+        let binding = Binding<Double>(
+            get: {
+                let edges = edgeScope == "all"
+                    ? controller.settings.screenEdges
+                    : controller.settings.screenEdgesByDisplay[edgeScope] ?? controller.settings.screenEdges
+                return Double(edges[keyPath: edge])
+            },
+            set: { value in
+                if edgeScope == "all" {
+                    controller.settings.screenEdges[keyPath: edge] = CGFloat(value)
+                } else {
+                    var edges = controller.settings.screenEdgesByDisplay[edgeScope] ?? controller.settings.screenEdges
+                    edges[keyPath: edge] = CGFloat(value)
+                    controller.settings.screenEdgesByDisplay[edgeScope] = edges
+                }
+            })
+        return LabeledContent(title) {
+            HStack {
+                Slider(value: binding, in: 0...200, step: 2)
+                Text("\(Int(binding.wrappedValue)) pt").monospacedDigit().frame(width: 52, alignment: .trailing)
+            }
+        }
+    }
+}
+
+private struct HighlightSettings: View {
+    @Bindable var controller: AppController
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Active window highlight", selection: $controller.settings.highlight.style) {
+                    Text("None").tag(HighlightStyle.none)
+                    Text("Active border").tag(HighlightStyle.activeBorder)
+                    Text("All borders").tag(HighlightStyle.allBorders)
+                    Text("Glow").tag(HighlightStyle.glow)
+                }
+                ColorPicker(
+                    "Color",
+                    selection: Binding(
+                        get: { Color(nsColor: NSColor(hex: controller.settings.highlight.color) ?? .systemOrange) },
+                        set: { controller.settings.highlight.color = NSColor($0).hexString }),
+                    supportsOpacity: false)
+                LabeledContent("Width") {
+                    Slider(value: $controller.settings.highlight.width, in: 1...8, step: 1)
+                }
+                Toggle("Hover focus", isOn: $controller.settings.hoverFocus)
+            }
+            Section {
+                Toggle(
+                    "No peek mode",
+                    isOn: Binding(get: { controller.noPeekOn }, set: { _ in controller.toggleNoPeek() }))
+                LabeledContent("Dim amount") {
+                    HStack {
+                        Slider(value: $controller.settings.noPeek.dim, in: 10...90, step: 5)
+                        Text("\(Int(controller.settings.noPeek.dim))%").monospacedDigit()
+                    }
+                }
+                Toggle("Blur other windows", isOn: $controller.settings.noPeek.blur)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+extension ShortcutAction {
+    var title: LocalizedStringKey {
+        switch self {
+        case .swapLeft: "Swap with the window on the left"
+        case .swapRight: "Swap with the window on the right"
+        case .swapUp: "Swap with the window above"
+        case .swapDown: "Swap with the window below"
+        case .makePrimary: "Make the active window primary"
+        case .nextWindow: "Activate the next window"
+        case .previousWindow: "Activate the previous window"
+        case .nextInTile: "Show the next window in this tile"
+        case .previousInTile: "Show the previous window in this tile"
+        case .tabView: "Tab View"
+        case .tabViewBackward: "Tab View, moving backwards"
+        case .bigger: "Make the active window bigger"
+        case .smaller: "Make the active window smaller"
+        case .resetSizes: "Reset window sizes on this screen"
+        case .float: "Float the active window, or tile it again"
+        case .alwaysFloat: "Always float windows like the active one"
+        case .focus: "Focus mode"
+        case .noPeek: "No peek mode"
+        case .cleanSpace: "Clean Space"
+        case .retile: "Retile"
+        case .tile1: "Tile 1 window on this screen"
+        case .tile2: "Tile up to 2 windows on this screen"
+        case .tile3: "Tile up to 3 windows on this screen"
+        case .tile4: "Tile up to 4 windows on this screen"
+        case .tile5: "Tile up to 5 windows"
+        }
+    }
+}
+
+private struct KeyboardSettings: View {
+    @Bindable var controller: AppController
+    @State private var recording: ShortcutAction?
+    @State private var candidate: KeyCombo?
+    @State private var monitor: Any?
+
+    private var system: Set<KeyCombo> { HotKeyCenter.systemShortcuts() }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Keyboard shortcuts", isOn: $controller.shortcuts.enabled)
+                Picker("Shortcut prefix", selection: $controller.shortcuts.prefix) {
+                    ForEach(ShortcutPrefix.allCases, id: \.self) { Text($0.symbols).tag($0) }
+                }
+                unusable
+                Button("Reset All") { controller.shortcuts.resetAll() }
+            }
+            if let candidate, let recording { conflictSection(candidate, recording) }
+            Section {
+                ForEach(ShortcutAction.allCases, id: \.self) { action in row(action) }
+            }
+        }
+        .formStyle(.grouped)
+        .onDisappear(perform: stopRecording)
+    }
+
+    @ViewBuilder
+    private var unusable: some View {
+        let taken = ShortcutAction.allCases.filter {
+            controller.shortcuts.combo(for: $0).map(system.contains) ?? false
+        }
+        if !taken.isEmpty {
+            Text("macOS uses some of these keys: \(taken.compactMap { controller.shortcuts.combo(for: $0)?.symbols }.joined(separator: " "))")
+                .font(.caption).foregroundStyle(.orange)
+        }
+    }
+
+    private func row(_ action: ShortcutAction) -> some View {
+        let combo = controller.shortcuts.combo(for: action)
+        let changed = controller.shortcuts.bindings[action.rawValue] != nil
+        return LabeledContent(action.title) {
+            HStack {
+                if changed {
+                    Button {
+                        controller.shortcuts.reset(action)
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.borderless)
+                }
+                Button(recording == action ? String(localized: "Press keys…") : combo?.symbols ?? String(localized: "Off")) {
+                    startRecording(action)
+                }
+                .monospaced()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func conflictSection(_ combo: KeyCombo, _ action: ShortcutAction) -> some View {
+        let conflicts = controller.shortcuts.conflicts(for: combo, action: action, system: system)
+        Section {
+            Text("\(combo.symbols) is already in use:").font(.callout)
+            ForEach(Array(conflicts.enumerated()), id: \.offset) { _, conflict in
+                switch conflict {
+                case .system: Text("macOS").font(.caption)
+                case .shortcut(let other): Text(other.title).font(.caption)
+                }
+            }
+            HStack {
+                Text("Free keys:").font(.caption)
+                ForEach(controller.shortcuts.suggestions(system: system, limit: 4), id: \.self) { free in
+                    Button(free.symbols) { commit(free, for: action) }.controlSize(.small)
+                }
+            }
+            HStack {
+                Button("Use Anyway") { commit(combo, for: action) }
+                Button("Cancel", action: stopRecording)
+            }
+        }
+    }
+
+    private func startRecording(_ action: ShortcutAction) {
+        stopRecording()
+        recording = action
+        // Shortcuts must not fire while the user presses the keys they want.
+        controller.hotKeys.unregisterAll()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            handle(event, for: action)
+            return nil
+        }
+    }
+
+    private func handle(_ event: NSEvent, for action: ShortcutAction) {
+        switch Int(event.keyCode) {
+        case 53:
+            stopRecording()
+            return
+        case 51, 117:
+            controller.shortcuts.bindings[action.rawValue] = ShortcutMap.off
+            stopRecording()
+            return
+        default:
+            break
+        }
+        guard let key = ShortcutKey(keyCode: UInt32(event.keyCode)) else { return }
+        var modifiers: KeyModifiers = []
+        let flags = event.modifierFlags
+        if flags.contains(.control) { modifiers.insert(.control) }
+        if flags.contains(.option) { modifiers.insert(.option) }
+        if flags.contains(.shift) { modifiers.insert(.shift) }
+        if flags.contains(.command) { modifiers.insert(.command) }
+        // A shortcut needs a real modifier, and Tab View needs one to be held.
+        guard !modifiers.subtracting(.shift).isEmpty else { return }
+        let combo = KeyCombo(key: key, modifiers: modifiers)
+        if controller.shortcuts.conflicts(for: combo, action: action, system: system).isEmpty {
+            commit(combo, for: action)
+        } else {
+            candidate = combo
+        }
+    }
+
+    private func commit(_ combo: KeyCombo, for action: ShortcutAction) {
+        if action.tileCount != nil {
+            controller.shortcuts.setTileModifiers(combo.modifiers)
+        } else {
+            controller.shortcuts.bindings[action.rawValue] = combo.string
+        }
+        stopRecording()
+    }
+
+    private func stopRecording() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        recording = nil
+        candidate = nil
+        controller.registerHotKeys()
+    }
+}
+
+private struct AppsSettings: View {
+    @Bindable var controller: AppController
+
+    private var addable: [NSRunningApplication] {
+        AXWindowSystem.eligibleApps().filter {
+            $0.bundleIdentifier.map { !controller.rules.excluded.contains($0) } ?? false
+        }
+    }
+
+    var body: some View {
+        Form {
+            Section("Apps that are never tiled") {
+                ForEach(controller.rules.excluded, id: \.self) { bundleID in
+                    HStack {
+                        Text(bundleID)
+                        Spacer()
+                        Button {
+                            controller.toggleTile(for: bundleID)
+                        } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                Menu("Add App") {
+                    ForEach(addable, id: \.processIdentifier) { app in
+                        Button(app.localizedName ?? "") {
+                            if let bundleID = app.bundleIdentifier { controller.toggleTile(for: bundleID) }
+                        }
+                    }
+                }
+            }
+            Section("Apps that can't shrink") {
+                ForEach(controller.rules.learnedMinimums.keys.sorted(), id: \.self) { bundleID in
+                    let size = controller.rules.learnedMinimums[bundleID] ?? .zero
+                    LabeledContent(bundleID, value: "\(Int(size.width)) × \(Int(size.height))")
+                }
+                Button("Forget All") { controller.rules.learnedMinimums = [:] }
+                    .disabled(controller.rules.learnedMinimums.isEmpty)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct AboutSettings: View {
+    let controller: AppController
+    @State private var includeDiagnostics = true
+
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Tiling", value: version)
+                LabeledContent("Config folder", value: ConfigDirectory.url().path)
+                Button("Open Config Folder") { NSWorkspace.shared.open(ConfigDirectory.url()) }
+            }
+            Section {
+                Toggle("Include diagnostics", isOn: $includeDiagnostics)
+                Button("Copy Report") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(report(), forType: .string)
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func report() -> String {
+        var lines = ["Tiling \(version)", ProcessInfo.processInfo.operatingSystemVersionString]
+        if includeDiagnostics {
+            let displays = Displays.current()
+            lines.append("Displays: \(displays.map { "\(Int($0.frame.width))x\(Int($0.frame.height))" }.joined(separator: ", "))")
+            lines.append("Status: \(controller.status)")
+            lines.append("Stage Manager: \(controller.stageManagerOn)")
+            lines.append("Learned apps: \(controller.rules.learnedMinimums.count)")
+        }
+        return lines.joined(separator: "\n")
+    }
+}

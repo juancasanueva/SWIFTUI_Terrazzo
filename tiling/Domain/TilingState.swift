@@ -436,6 +436,15 @@ struct TilingState: Equatable {
         return move(id, from: key, tile: tile, to: target, context: context)
     }
 
+    /// Sends a window to a chosen screen, under the same rules as moving past a screen edge.
+    @discardableResult
+    mutating func moveToScreen(_ id: WindowID, target: WorkspaceKey, context: TilingContext) -> [Notice] {
+        guard let key = key(of: id), key != target,
+            let tile = workspaces[key]?.tiles.firstIndex(where: { $0.windows.contains(id) })
+        else { return [] }
+        return move(id, from: key, tile: tile, to: target, context: context)
+    }
+
     private mutating func move(
         _ id: WindowID, from key: WorkspaceKey, tile: Int, to target: WorkspaceKey, context: TilingContext
     ) -> [Notice] {
