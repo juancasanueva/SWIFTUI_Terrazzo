@@ -35,6 +35,12 @@ struct AppSettings: Codable, Equatable, Sendable {
         var style: HighlightStyle = .activeBorder
         var color = "#FF9500"
         var width: Double = 3
+        /// The corner radius of the windows being outlined. macOS gives no way to read it; 16 is what
+        /// standard windows measure, and apps that draw their own corners may differ.
+        var cornerRadius: Double = 16
+
+        /// The border's inner edge follows the window, so its outer edge is rounder by its thickness.
+        var outerRadius: Double { max(cornerRadius, 0) + width }
     }
 
     /// The bars above stacked windows.

@@ -20,6 +20,19 @@ struct ConfigTests {
                 == "/Users/me/.config/tiling")
     }
 
+    @Test func theBorderHugsARoundedWindow() {
+        var highlight = AppSettings.Highlight()
+        #expect(highlight.cornerRadius == 16)
+        #expect(highlight.width == 3)
+        // The border's inner edge follows the window, so its outer edge is rounder by its thickness.
+        #expect(highlight.outerRadius == 19)
+        highlight.width = 8
+        highlight.cornerRadius = 26
+        #expect(highlight.outerRadius == 34)
+        highlight.cornerRadius = -5
+        #expect(highlight.outerRadius == 8)
+    }
+
     @Test func resizeStepDefaultsToFivePercent() {
         #expect(AppSettings().resizeStep == 5)
         #expect(AppSettings().resolvedResizeStep == 0.05)

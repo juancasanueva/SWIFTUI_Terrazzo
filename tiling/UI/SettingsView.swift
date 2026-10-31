@@ -206,6 +206,12 @@ private struct HighlightSettings: View {
                 LabeledContent("Width") {
                     Slider(value: $controller.settings.highlight.width, in: 1...8, step: 1)
                 }
+                LabeledContent("Corner radius") {
+                    HStack {
+                        Slider(value: $controller.settings.highlight.cornerRadius, in: 0...40, step: 1)
+                        Text("\(Int(controller.settings.highlight.cornerRadius)) pt").monospacedDigit()
+                    }
+                }
                 Toggle("Hover focus", isOn: $controller.settings.hoverFocus)
             }
             Section("Stacked windows") {

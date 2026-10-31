@@ -20,6 +20,8 @@ The app writes these when you change something in its interface, and reloads the
 { "gap": 12, "layout": "side", "mainSize": "twoThirds", "windowsPerScreen": 4 }
 ```
 
+The active window border follows `highlight.cornerRadius`, in points: 16 by default, which is what standard macOS windows measure. Apps that draw their own corners may need another value; it's also in Settings → Highlight.
+
 The bars above stacked windows have their own settings: `color` as hex, and `hoverDelay`, the seconds the pointer rests on a bar before the panel with the window icons opens, from 0 to 10. Both are also in Settings → Highlight.
 
 ```json

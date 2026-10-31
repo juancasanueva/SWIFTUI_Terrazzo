@@ -119,7 +119,8 @@ final class OverlayCenter {
             let ring = CALayer()
             ring.frame = view.bounds.insetBy(dx: outset - width, dy: outset - width)
             ring.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
-            ring.cornerRadius = 12
+            ring.cornerRadius = CGFloat(model.settings.highlight.outerRadius)
+            ring.cornerCurve = .continuous
             ring.borderWidth = width
             ring.borderColor = color.cgColor
             if style == .glow {
