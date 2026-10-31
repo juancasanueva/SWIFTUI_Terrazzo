@@ -58,7 +58,7 @@ All of this is done once, in order, before the first release.
    Losing it severs the update channel of **every** app that shares it; the
    public key is not a secret.
 5. **The Homebrew cask, right after the first release.** `Casks/terrazzo.rb`
-   belongs in `juancasanueva/tap` (`juancasanueva/homebrew-tap`), with an `terrazzo`
+   belongs in `juancasanueva/tap` (`juancasanueva/homebrew-tap`), with a `terrazzo`
    entry in its `bump.yml` matrix and `ci.yml`. The tap change starts with
    `sha256 :no_check` as a placeholder, which `bump.yml` cannot rewrite: replace it
    by hand with `sha256 "<sha256 of Terrazzo-<version>.zip>"` before pushing, once the
@@ -138,6 +138,11 @@ scripts/release.sh all
 Output goes to `build/` (override with `RELEASE_BUILD_DIR`); do not commit it.
 `SIGNING_STYLE` defaults to `manual` and must match `signingStyle` in
 `scripts/ExportOptions.plist`; the script refuses to run when they disagree.
+
+`smoke` and `all` start the delivered app for 20 s. On a Mac where the same Developer ID
+signature already has Accessibility access and the tour is finished, it runs as the real window
+manager with your real config, alongside any copy already running. Quit Terrazzo first, or stop at
+`verify`.
 
 The checks that need neither secrets nor network:
 
