@@ -81,7 +81,10 @@ struct ConfigTests {
 
     @Test func defaultsMatchTheDocumentedTable() {
         let map = ShortcutMap()
-        #expect(map.combo(for: .swapLeft)?.symbols == "⌃⌥←")
+        #expect(map.combo(for: .swapLeft)?.symbols == "⌥⇧←")
+        #expect(map.combo(for: .swapRight)?.symbols == "⌥⇧→")
+        #expect(map.combo(for: .swapUp)?.symbols == "⌥⇧↑")
+        #expect(map.combo(for: .swapDown)?.symbols == "⌥⇧↓")
         #expect(map.combo(for: .makePrimary)?.symbols == "⌃⌥↩")
         #expect(map.combo(for: .nextInTile)?.symbols == "⌃⌥`")
         #expect(map.combo(for: .previousInTile)?.symbols == "⌃⌥⇧`")
@@ -114,7 +117,8 @@ struct ConfigTests {
         var map = ShortcutMap()
         map.bindings[ShortcutAction.focus.rawValue] = "ctrl+shift+y"
         map.prefix = .optionCommand
-        #expect(map.combo(for: .swapLeft)?.symbols == "⌥⌘←")
+        #expect(map.combo(for: .retile)?.symbols == "⌥⌘R")
+        #expect(map.combo(for: .swapLeft)?.symbols == "⌥⇧←")
         #expect(map.combo(for: .focus)?.symbols == "⌃⇧Y")
         #expect(map.combo(for: .tabView)?.symbols == "⌥⇥")
     }

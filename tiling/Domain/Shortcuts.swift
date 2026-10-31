@@ -143,6 +143,13 @@ enum ShortcutAction: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    var isSwap: Bool {
+        switch self {
+        case .swapLeft, .swapRight, .swapUp, .swapDown: true
+        default: false
+        }
+    }
+
     var focusDirection: Direction? {
         switch self {
         case .focusLeft: .left
@@ -188,6 +195,10 @@ struct ShortcutMap: Codable, Equatable, Sendable {
             return binding == Self.off ? nil : KeyCombo(string: binding)
         }
         let suffix = action.defaultSuffix
+        // Moving goes with directional focus: same arrows and modifier, plus Shift, whatever the prefix.
+        if action.isSwap {
+            return KeyCombo(key: suffix.key, modifiers: [.option, .shift])
+        }
         if action == .tabViewBackward {
             return combo(for: .tabView).map { KeyCombo(key: $0.key, modifiers: $0.modifiers.union(.shift)) }
         }
