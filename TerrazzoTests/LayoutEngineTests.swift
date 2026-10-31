@@ -17,6 +17,46 @@ struct LayoutEngineTests {
         return LayoutEngine.solve(shape: shape, area: area, gap: gap, minimums: mins).frames
     }
 
+    private func dividers(
+        _ kind: LayoutKind, _ count: Int, in area: CGRect, gap: CGFloat
+    ) -> [LayoutDivider] {
+        let shape = LayoutEngine.shape(kind: kind, count: count, area: area, main: .half, overrides: SizeOverrides())
+        return LayoutEngine.dividers(
+            shape: shape, frames: LayoutEngine.solve(shape: shape, area: area, gap: gap, minimums: [:]).frames)
+    }
+
+    @Test func aSingleWindowHasNoDivider() {
+        #expect(dividers(.grid, 1, in: laptop, gap: 12).isEmpty)
+    }
+
+    @Test func dividersFillTheGapsBetweenTiles() {
+        let result = dividers(.grid, 3, in: laptop, gap: 12)
+        #expect(
+            result == [
+                LayoutDivider(
+                    slot: 0, movesHorizontally: true, frame: CGRect(x: 750, y: 44, width: 12, height: 921)),
+                LayoutDivider(
+                    slot: 1, movesHorizontally: false, frame: CGRect(x: 762, y: 498.5, width: 738, height: 12)),
+            ])
+    }
+
+    @Test func aTrackDividerSpansEveryCell() {
+        let result = dividers(.grid, 4, in: laptop, gap: 12)
+        let track = result.first { $0.movesHorizontally }
+        #expect(track?.frame == CGRect(x: 750, y: 44, width: 12, height: 921))
+        #expect(result.filter { !$0.movesHorizontally }.map(\.slot).sorted() == [0, 1])
+    }
+
+    @Test func rowsHaveDividersThatMoveVertically() {
+        let result = dividers(.rows, 2, in: laptop, gap: 0)
+        #expect(
+            result == [
+                LayoutDivider(
+                    slot: 0, movesHorizontally: false, frame: CGRect(x: 0, y: 504.5, width: 1512, height: 0))
+            ])
+        #expect(result[0].position == 504.5)
+    }
+
     @Test func singleWindowFillsTheArea() {
         #expect(frames(.grid, 1, in: laptop) == [laptop])
     }

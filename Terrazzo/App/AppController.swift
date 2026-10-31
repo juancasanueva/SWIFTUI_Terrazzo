@@ -1218,6 +1218,21 @@ final class AppController {
         lastApplied[id] = nil
     }
 
+    func moveDivider(_ divider: DividerID, to position: CGFloat) {
+        let context = context()
+        guard state.moveDivider(divider, to: position, context: context) else { return }
+        apply(context: context)
+    }
+
+    /// Windows that refused a size while the button was down get asked again, so their minimum can be learned.
+    func finishDividerDrag(_ divider: DividerID) {
+        for tile in state.workspaces[divider.key]?.tiles ?? [] {
+            tile.windows.forEach { lastApplied[$0] = nil }
+        }
+        saveScreenPreferences(divider.key)
+        dragEnded()
+    }
+
     /// A click on a window says where the user is, even when macOS never stopped reporting that window.
     func windowPressed() {
         guard emptyFocus.display != nil else { return }

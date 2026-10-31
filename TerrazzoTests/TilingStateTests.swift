@@ -599,6 +599,76 @@ struct TilingStateTests {
         #expect(peek(state, context()).placements.first { $0.id == 2 }?.frame.width == 960)
     }
 
+    private func gapped() -> TilingContext { context(policy: TilingPolicy(gap: 12)) }
+
+    private func width(of id: WindowID, _ state: TilingState, _ ctx: TilingContext) -> CGFloat? {
+        peek(state, ctx).placements.first { $0.id == id }?.frame.width
+    }
+
+    @Test func movingADividerResizesBothSidesAndKeepsItUnderThePointer() throws {
+        let ctx = gapped()
+        var state = filled([1, 2], context: ctx)
+        let divider = try #require(state.dividers(on: left, context: ctx).first)
+        let before = try #require(width(of: 1, state, ctx))
+        let neighbor = try #require(width(of: 2, state, ctx))
+
+        let moved = state.moveDivider(divider.id(on: left), to: divider.position + 100, context: ctx)
+        #expect(moved)
+
+        #expect(width(of: 1, state, ctx) == before + 100)
+        #expect(width(of: 2, state, ctx) == neighbor - 100)
+        #expect(state.dividers(on: left, context: ctx).first?.position == divider.position + 100)
+        #expect(state.hasCustomSizes(on: left))
+    }
+
+    @Test func aDividerStopsAtTheSmallestWindowSize() throws {
+        let ctx = gapped()
+        var state = filled([1, 2], context: ctx)
+        let divider = try #require(state.dividers(on: left, context: ctx).first)
+
+        let moved = state.moveDivider(divider.id(on: left), to: 0, context: ctx)
+        #expect(moved)
+
+        #expect(width(of: 1, state, ctx) == LayoutEngine.resizeFloor.width)
+    }
+
+    @Test func aDividerBetweenCellsMovesOnlyThatEdge() throws {
+        let ctx = gapped()
+        var state = filled([1, 2, 3], context: ctx)
+        let divider = try #require(state.dividers(on: left, context: ctx).first { !$0.movesHorizontally })
+        let primary = peek(state, ctx).placements.first { $0.id == 1 }?.frame
+        let top = try #require(peek(state, ctx).placements.first { $0.id == 2 }?.frame.height)
+
+        let moved = state.moveDivider(divider.id(on: left), to: divider.position - 50, context: ctx)
+        #expect(moved)
+
+        #expect(peek(state, ctx).placements.first { $0.id == 2 }?.frame.height == top - 50)
+        #expect(peek(state, ctx).placements.first { $0.id == 1 }?.frame == primary)
+    }
+
+    @Test func aDividerThatNoLongerExistsMovesNothing() {
+        let ctx = gapped()
+        var state = filled([1, 2], context: ctx)
+        let gone = DividerID(key: left, slot: 5, movesHorizontally: true)
+
+        let moved = state.moveDivider(gone, to: 100, context: ctx)
+        #expect(!moved)
+        #expect(!state.hasCustomSizes(on: left))
+    }
+
+    @Test func focusAndCleanSpaceHaveNoDividers() {
+        let ctx = gapped()
+        var state = filled([1, 2], context: ctx)
+        #expect(state.dividers(on: left, context: ctx).count == 1)
+
+        state.workspaces[left]?.zoomed = 1
+        #expect(state.dividers(on: left, context: ctx).isEmpty)
+
+        state.workspaces[left]?.zoomed = nil
+        state.workspaces[left]?.cleanSet = [1, 2]
+        #expect(state.dividers(on: left, context: ctx).isEmpty)
+    }
+
     @Test func stepResizeAtTheLimitReportsIt() {
         var state = filled([1])
         let grown = state.step(1, grow: true, context: context())

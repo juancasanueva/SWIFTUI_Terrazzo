@@ -44,11 +44,12 @@ extension CleanBackground {
     }
 }
 
-/// Every window the app draws over the desktop: borders, curtains, grips, highlights and notices.
+/// Every window the app draws over the desktop: borders, curtains, grips, dividers, highlights and notices.
 final class OverlayCenter {
     private var borders: [WindowID: NSPanel] = [:]
     private var curtains: [String: CurtainPanel] = [:]
     private var grips: [WindowID: GripPanel] = [:]
+    private var dividers: [DividerID: DividerPanel] = [:]
     private var highlight: NSPanel?
     private var highlightLabel: NSTextField?
     private var noticePanel: NSPanel?
@@ -78,6 +79,8 @@ final class OverlayCenter {
         curtains = [:]
         grips.values.forEach { $0.orderOut(nil) }
         grips = [:]
+        dividers.values.forEach { $0.remove() }
+        dividers = [:]
         hideDropHighlight()
     }
 
@@ -85,6 +88,7 @@ final class OverlayCenter {
         updateCurtains(model)
         updateBorders(model)
         updateGrips(model, controller: controller)
+        updateDividers(model, controller: controller)
     }
 
     // MARK: Borders
@@ -196,6 +200,49 @@ final class OverlayCenter {
         for (id, panel) in grips where !seen.contains(id) {
             panel.orderOut(nil)
             grips[id] = nil
+        }
+    }
+
+    // MARK: Dividers
+
+    private func updateDividers(_ model: OverlayModel, controller: AppController) {
+        var seen: Set<DividerID> = []
+        let frontToBack = Self.windowsFrontToBack()
+        for screen in model.context.screens {
+            let tiles = Set(model.state.workspaces[screen.key]?.tiles.flatMap(\.windows) ?? [])
+            for divider in model.state.dividers(on: screen.key, context: model.context) {
+                let id = divider.id(on: screen.key)
+                seen.insert(id)
+                let panel = dividers[id] ?? DividerPanel(id: id, controller: controller)
+                dividers[id] = panel
+                panel.show(
+                    divider,
+                    order: DividerMetrics.order(
+                        hitFrame: DividerMetrics.hitFrame(of: divider), tiles: tiles, frontToBack: frontToBack))
+            }
+        }
+        for (id, panel) in dividers where !seen.contains(id) {
+            panel.remove()
+            dividers[id] = nil
+        }
+    }
+
+    /// Ordinary windows that can take a click, frontmost first. This app's own overlays don't count, and neither
+    /// do border utilities, which draw over windows without taking clicks and have no app to activate.
+    private static func windowsFrontToBack() -> [StackedWindow] {
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+        let overlays = Set(NSApp.windows.filter { $0 is NSPanel }.map(\.windowNumber))
+        return (list as? [[String: Any]] ?? []).compactMap { entry in
+            guard let number = entry[kCGWindowNumber as String] as? NSNumber,
+                !overlays.contains(number.intValue),
+                (entry[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
+                (entry[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1 > 0,
+                let owner = (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value,
+                let policy = NSRunningApplication(processIdentifier: owner)?.activationPolicy, policy != .prohibited,
+                let bounds = entry[kCGWindowBounds as String] as? NSDictionary,
+                let frame = CGRect(dictionaryRepresentation: bounds)
+            else { return nil }
+            return StackedWindow(id: number.uint32Value, frame: frame)
         }
     }
 

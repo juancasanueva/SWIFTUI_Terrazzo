@@ -9,6 +9,19 @@ struct WorkspaceKey: Hashable, Codable, Sendable {
     var virtual = 1
 }
 
+/// Names a divider across layouts, because its frame changes while it is dragged.
+struct DividerID: Hashable, Sendable {
+    var key: WorkspaceKey
+    var slot: Int
+    var movesHorizontally: Bool
+}
+
+extension LayoutDivider {
+    func id(on key: WorkspaceKey) -> DividerID {
+        DividerID(key: key, slot: slot, movesHorizontally: movesHorizontally)
+    }
+}
+
 enum FullScreenBehavior: String, Codable, CaseIterable, Sendable {
     case stack, floatInMiddle
 }
@@ -417,6 +430,17 @@ struct TilingState: Equatable {
         ).frames
     }
 
+    /// The dividers that can be dragged on a screen. In Focus and Clean Space windows aren't in their slots.
+    func dividers(on key: WorkspaceKey, context: TilingContext) -> [LayoutDivider] {
+        guard let area = area(of: key, context: context), let workspace = workspaces[key],
+            !workspace.tiles.isEmpty, workspace.zoomed == nil, workspace.cleanSet == nil
+        else { return [] }
+        let shape = LayoutEngine.shape(
+            kind: resolvedKind(workspace, area: area, policy: context.policy), count: workspace.tiles.count,
+            area: area, main: context.policy.main, overrides: workspace.overrides)
+        return LayoutEngine.dividers(shape: shape, frames: slotFrames(on: key, context: context))
+    }
+
     mutating func plan(context: TilingContext) -> Plan {
         var plan = Plan()
         for screen in context.screens {
@@ -695,6 +719,16 @@ struct TilingState: Equatable {
                 gap: context.policy.gap, minimums: minimums, deltas: deltas,
                 overrides: &state.workspaces[key, default: Workspace()].overrides)
         } ?? false
+    }
+
+    /// Moves a divider toward `position`, stopping where a window on either side reaches its smallest size.
+    mutating func moveDivider(_ divider: DividerID, to position: CGFloat, context: TilingContext) -> Bool {
+        guard let current = dividers(on: divider.key, context: context).first(where: { $0.id(on: divider.key) == divider }),
+            let window = workspaces[divider.key]?.tiles[safe: divider.slot]?.windows.first
+        else { return false }
+        let delta = position - current.position
+        let deltas = divider.movesHorizontally ? EdgeDeltas(maxX: delta) : EdgeDeltas(maxY: delta)
+        return dragEdges(of: window, deltas: deltas, context: context)
     }
 
     mutating func step(_ id: WindowID, grow: Bool, context: TilingContext) -> [Notice] {

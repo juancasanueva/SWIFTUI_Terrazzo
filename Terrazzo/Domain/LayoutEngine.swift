@@ -69,6 +69,17 @@ struct SolvedLayout: Equatable, Sendable {
     var overflowingSlots: [Int]
 }
 
+/// The gap between two neighboring tiles, which can be dragged to resize both. `slot` is the tile whose
+/// far edge it is: its right edge when the divider moves horizontally, its bottom edge otherwise.
+struct LayoutDivider: Equatable, Sendable {
+    var slot: Int
+    var movesHorizontally: Bool
+    var frame: CGRect
+
+    /// Where the divider sits along the axis it moves on.
+    var position: CGFloat { movesHorizontally ? frame.midX : frame.midY }
+}
+
 enum StepResult: Equatable, Sendable {
     case changed, limit
 }
@@ -245,6 +256,47 @@ enum LayoutEngine {
 
     private static func halfPoint(_ value: CGFloat) -> CGFloat {
         (value * 2).rounded() / 2
+    }
+
+    // MARK: Dividers
+
+    /// One divider per split line. A divider between tracks spans all of them; one between cells spans its track.
+    static func dividers(shape: LayoutShape, frames: [CGRect]) -> [LayoutDivider] {
+        var result: [LayoutDivider] = []
+        for (index, track) in shape.tracks.enumerated() {
+            if index + 1 < shape.tracks.count, let first = track.cells.first,
+                let next = shape.tracks[index + 1].cells.first {
+                result.append(
+                    divider(
+                        slot: first.slot, movesHorizontally: !shape.rowsFirst, before: frames[first.slot],
+                        after: frames[next.slot], alongside: frames))
+            }
+            let cellFrames = track.cells.map { frames[$0.slot] }
+            for (cell, following) in zip(track.cells, track.cells.dropFirst()) {
+                result.append(
+                    divider(
+                        slot: cell.slot, movesHorizontally: shape.rowsFirst, before: frames[cell.slot],
+                        after: frames[following.slot], alongside: cellFrames))
+            }
+        }
+        return result
+    }
+
+    private static func divider(
+        slot: Int, movesHorizontally: Bool, before: CGRect, after: CGRect, alongside: [CGRect]
+    ) -> LayoutDivider {
+        let start = movesHorizontally ? before.maxX : before.maxY
+        let end = movesHorizontally ? after.minX : after.minY
+        // Tiles that overflow the screen can overlap, leaving no gap: sit where they meet.
+        let thickness = max(end - start, 0)
+        let origin = thickness > 0 ? start : (start + end) / 2
+        let low = alongside.map { movesHorizontally ? $0.minY : $0.minX }.min() ?? 0
+        let high = alongside.map { movesHorizontally ? $0.maxY : $0.maxX }.max() ?? 0
+        let frame =
+            movesHorizontally
+            ? CGRect(x: origin, y: low, width: thickness, height: high - low)
+            : CGRect(x: low, y: origin, width: high - low, height: thickness)
+        return LayoutDivider(slot: slot, movesHorizontally: movesHorizontally, frame: frame)
     }
 
     // MARK: Capacity

@@ -24,6 +24,76 @@ struct InterfaceSmokeTests {
         #expect(host.fittingSize.height > 0)
     }
 
+    @Test func aDividerIsEasyToHitEvenInANarrowGap() {
+        let narrow = LayoutDivider(
+            slot: 0, movesHorizontally: true, frame: CGRect(x: 100, y: 10, width: 2, height: 500))
+        #expect(DividerMetrics.hitFrame(of: narrow) == CGRect(x: 95, y: 210, width: 12, height: 100))
+
+        let wide = LayoutDivider(
+            slot: 0, movesHorizontally: false, frame: CGRect(x: 10, y: 100, width: 500, height: 20))
+        #expect(DividerMetrics.hitFrame(of: wide) == CGRect(x: 210, y: 100, width: 100, height: 20))
+    }
+
+    @Test func aDividerIsNeverLongerThanItsGap() {
+        let short = LayoutDivider(
+            slot: 0, movesHorizontally: true, frame: CGRect(x: 100, y: 10, width: 12, height: 60))
+        #expect(DividerMetrics.hitFrame(of: short) == short.frame)
+    }
+
+    @Test func aDividerIsWhite() {
+        #expect(DividerMetrics.color == .white)
+    }
+
+    @Test func aDividerStandsOutOnlyWhenThePointerIsOnIt() {
+        let rest = DividerMetrics.appearance(emphasized: false)
+        let hover = DividerMetrics.appearance(emphasized: true)
+        #expect(rest.opacity <= 0.3)
+        #expect(hover.opacity == 1)
+        #expect(hover.thickness > rest.thickness)
+    }
+
+    @Test func grabbingADividerOffCenterDoesNotMakeItJump() {
+        let drag = DividerDrag(position: 500, pointer: 503)
+        #expect(drag.position(for: 503) == 500)
+        #expect(drag.position(for: 553) == 550)
+    }
+
+    @Test func aDividerStaysBelowGripsAndOtherWindows() {
+        #expect(DividerMetrics.level == .normal)
+        #expect(DividerMetrics.level.rawValue < NSWindow.Level.floating.rawValue)
+    }
+
+    private var strip: CGRect { CGRect(x: 500, y: 0, width: 12, height: 900) }
+    private var elsewhere: CGRect { CGRect(x: 0, y: 0, width: 100, height: 100) }
+    private var overStrip: CGRect { CGRect(x: 400, y: 300, width: 300, height: 200) }
+
+    @Test func aDividerSitsAboveTheHighestTileWhenNothingElseIsInTheGap() {
+        let windows = [
+            StackedWindow(id: 9, frame: elsewhere), StackedWindow(id: 3, frame: elsewhere),
+            StackedWindow(id: 1, frame: elsewhere),
+        ]
+        #expect(DividerMetrics.order(hitFrame: strip, tiles: [1, 3], frontToBack: windows) == .above(3))
+    }
+
+    @Test func anUntiledWindowOverTheGapKeepsItsClicksEvenBehindARaisedTile() {
+        // Clicking a tile raises it above the float, which must still stay above the divider.
+        let windows = [
+            StackedWindow(id: 1, frame: elsewhere), StackedWindow(id: 9, frame: overStrip),
+            StackedWindow(id: 8, frame: overStrip), StackedWindow(id: 3, frame: elsewhere),
+        ]
+        #expect(DividerMetrics.order(hitFrame: strip, tiles: [1, 3], frontToBack: windows) == .below(9))
+    }
+
+    @Test func aTileOverlappingTheGapIsNotACover() {
+        let windows = [StackedWindow(id: 1, frame: overStrip)]
+        #expect(DividerMetrics.order(hitFrame: strip, tiles: [1], frontToBack: windows) == .above(1))
+    }
+
+    @Test func aDividerWithNoTileOnScreenHasNoPlace() {
+        let windows = [StackedWindow(id: 9, frame: elsewhere)]
+        #expect(DividerMetrics.order(hitFrame: strip, tiles: [1], frontToBack: windows) == nil)
+    }
+
     @Test func theTerrazzoIconIsTheDefault() {
         #expect(AppSettings().iconStyle == .terrazzo)
         #expect(IconStyle.terrazzo.usesBundledIcon)
