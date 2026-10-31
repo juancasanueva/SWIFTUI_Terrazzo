@@ -9,10 +9,35 @@ final class GripModel {
     var onExpansionChange: ((Bool) -> Void)?
 }
 
+/// Sizes of the handle above a tile, chosen so each segment is easy to hit.
+enum GripMetrics {
+    static let hitHeight: CGFloat = 24
+    static let barHeight: CGFloat = 8
+    static let showingWidth: CGFloat = 44
+    static let waitingWidth: CGFloat = 24
+    static let dotSize: CGFloat = 12
+    static let dotTarget: CGFloat = 24
+    static let spacing: CGFloat = 4
+    private static let sidePadding: CGFloat = 8
+
+    static func collapsedSize(count: Int, isActive: Bool) -> CGSize {
+        let others = CGFloat(max(count - 1, 0))
+        let content =
+            isActive
+            ? showingWidth + others * (waitingWidth + spacing)
+            : dotTarget + others * (dotTarget + spacing)
+        return CGSize(width: content + sidePadding * 2, height: hitHeight)
+    }
+}
+
 /// The handle above a tile: segments for the active tile, dots for inactive stacks, and the bar of
 /// quick actions and window chips when the pointer rests on it.
 final class GripPanel: NSPanel {
-    private static let collapsedHeight: CGFloat = 12
+    /// This panel never becomes key, so the first click has to count.
+    private final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    }
+
     private static let expandedSize = CGSize(width: 440, height: 84)
 
     private let model = GripModel()
@@ -30,13 +55,18 @@ final class GripPanel: NSPanel {
         isReleasedWhenClosed = false
         animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        contentView = NSHostingView(rootView: GripView(model: model, controller: controller))
+        // By default macOS sends clicks on transparent pixels to the window below, which would leave
+        // only the drawn segments clickable. Setting this explicitly makes the whole panel catch them.
+        ignoresMouseEvents = false
+        contentView = FirstClickHostingView(rootView: GripView(model: model, controller: controller))
         model.onExpansionChange = { [weak self] _ in self?.reposition() }
     }
 
     func show(windows: [WindowID], isActive: Bool, above frame: CGRect, gap: CGFloat) {
         model.windows = windows
         model.isActive = isActive
+        // Only the active tile has the bar of actions.
+        if !isActive { model.expanded = false }
         anchor = frame
         self.gap = gap
         reposition()
@@ -48,10 +78,10 @@ final class GripPanel: NSPanel {
         if model.expanded {
             size = Self.expandedSize
         } else {
-            let unit: CGFloat = model.isActive ? 18 : 12
-            size = CGSize(width: max(CGFloat(model.windows.count) * unit + 24, 48), height: Self.collapsedHeight)
+            size = GripMetrics.collapsedSize(count: model.windows.count, isActive: model.isActive)
         }
-        let top = anchor.minY - gap / 2 - Self.collapsedHeight / 2
+        // The visible bar stays centered in the gap above the window; only its click area reaches past.
+        let top = anchor.minY - gap / 2 - GripMetrics.hitHeight / 2
         let rect = CGRect(x: anchor.midX - size.width / 2, y: top, width: size.width, height: size.height)
         setFrame(Displays.toAppKit(rect), display: true)
     }
@@ -75,35 +105,42 @@ private struct GripView: View {
     }
 
     private var segments: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: GripMetrics.spacing) {
             ForEach(Array(model.windows.enumerated()), id: \.element) { index, id in
                 Button {
                     controller.showWindow(id)
                 } label: {
                     if model.isActive {
                         Capsule()
-                            .fill(Color.orange.opacity(index == 0 ? 1 : 0.45))
-                            .frame(width: index == 0 ? 24 : 10, height: 4)
-                            .padding(.vertical, 4)
+                            .fill(Color.orange.opacity(index == 0 ? 1 : 0.6))
+                            .frame(
+                                width: index == 0 ? GripMetrics.showingWidth : GripMetrics.waitingWidth,
+                                height: GripMetrics.barHeight
+                            )
+                            .frame(height: GripMetrics.hitHeight)
                             .contentShape(Rectangle())
                     } else {
                         Circle()
                             .fill(Color.orange.opacity(index == 0 ? 1 : 0.55))
-                            .frame(width: 6, height: 6)
-                            .padding(3)
+                            .frame(width: GripMetrics.dotSize, height: GripMetrics.dotSize)
+                            .frame(width: GripMetrics.dotTarget, height: GripMetrics.hitHeight)
                             .contentShape(Rectangle())
                     }
                 }
                 .buttonStyle(.plain)
             }
         }
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.regularMaterial, in: Capsule())
     }
 
     private func hoverChanged(_ hovering: Bool) {
         pendingExpansion?.cancel()
         pendingExpansion = Task {
-            try? await Task.sleep(for: .milliseconds(hovering ? 250 : 400))
-            guard !Task.isCancelled, model.isActive || !hovering else { return }
+            try? await Task.sleep(for: .milliseconds(hovering ? 500 : 400))
+            // Replacing the segments mid-click would lose the click.
+            guard !Task.isCancelled, model.isActive || !hovering, NSEvent.pressedMouseButtons == 0 else { return }
             if model.expanded != hovering {
                 model.expanded = hovering
                 model.onExpansionChange?(hovering)

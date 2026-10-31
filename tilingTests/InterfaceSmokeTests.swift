@@ -49,3 +49,25 @@ struct InterfaceSmokeTests {
         #expect(spanish?.localizedString(forKey: "This Space is full", value: nil, table: nil) == "Este Espacio está lleno")
     }
 }
+
+@MainActor
+struct GripMetricsTests {
+    @Test func everySegmentIsBigEnoughToClick() {
+        #expect(GripMetrics.hitHeight >= 24)
+        #expect(GripMetrics.showingWidth >= 40)
+        #expect(GripMetrics.waitingWidth >= 24)
+        #expect(GripMetrics.dotTarget >= 24)
+    }
+
+    @Test func thePanelFitsEverySegment() {
+        for count in 1...8 {
+            let active = GripMetrics.collapsedSize(count: count, isActive: true)
+            #expect(
+                active.width
+                    >= GripMetrics.showingWidth + CGFloat(count - 1) * (GripMetrics.waitingWidth + GripMetrics.spacing))
+            let inactive = GripMetrics.collapsedSize(count: count, isActive: false)
+            #expect(inactive.width >= CGFloat(count) * (GripMetrics.dotTarget + GripMetrics.spacing) - GripMetrics.spacing)
+            #expect(active.height == GripMetrics.hitHeight)
+        }
+    }
+}
