@@ -251,6 +251,12 @@ struct ShortcutMap: Codable, Equatable, Sendable {
         if action == .focus {
             return KeyCombo(key: .f, modifiers: .control)
         }
+        if action == .nextInTile {
+            return KeyCombo(key: .n, modifiers: .control)
+        }
+        if action == .previousInTile {
+            return KeyCombo(key: .n, modifiers: [.control, .shift])
+        }
         if action.tileCount != nil, let tileModifiers,
             let shared = KeyCombo(string: "\(tileModifiers)+\(suffix.key.rawValue)") {
             return shared

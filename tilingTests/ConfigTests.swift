@@ -108,8 +108,8 @@ struct ConfigTests {
         #expect(map.combo(for: .swapUp)?.symbols == "⌃⇧↑")
         #expect(map.combo(for: .swapDown)?.symbols == "⌃⇧↓")
         #expect(map.combo(for: .makePrimary)?.symbols == "⌃⌥↩")
-        #expect(map.combo(for: .nextInTile)?.symbols == "⌃⌥`")
-        #expect(map.combo(for: .previousInTile)?.symbols == "⌃⌥⇧`")
+        #expect(map.combo(for: .nextInTile)?.symbols == "⌃N")
+        #expect(map.combo(for: .previousInTile)?.symbols == "⌃⇧N")
         #expect(map.combo(for: .tabView)?.symbols == "⌥⇥")
         #expect(map.combo(for: .tabViewBackward)?.symbols == "⌥⇧⇥")
         #expect(map.combo(for: .alwaysFloat)?.symbols == "⌃⌥⇧F")
@@ -134,6 +134,13 @@ struct ConfigTests {
         map.bindings[ShortcutAction.bigger.rawValue] = "ctrl+opt+="
         #expect(map.combo(for: .bigger)?.string == "ctrl+opt+=")
         #expect(map.combo(for: .resetSizes)?.symbols == "⌃⌥0")
+    }
+
+    @Test func stackSwitchingStaysOnControlNWhateverThePrefix() {
+        var map = ShortcutMap()
+        map.prefix = .optionCommand
+        #expect(map.combo(for: .nextInTile)?.symbols == "⌃N")
+        #expect(map.combo(for: .previousInTile)?.symbols == "⌃⇧N")
     }
 
     @Test func focusModeUsesControlFWhateverThePrefix() {
