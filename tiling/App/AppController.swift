@@ -871,7 +871,9 @@ final class AppController {
                 let rect = CGRect(dictionaryRepresentation: bounds),
                 rect.insetBy(dx: -tolerance, dy: -tolerance).contains(point),
                 let number = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
-                (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value != getpid()
+                let owner = (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value, owner != getpid(),
+                // Border and overlay utilities draw over windows without taking their clicks.
+                NSRunningApplication(processIdentifier: owner)?.activationPolicy == .regular
             else { continue }
             let layer = (entry[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0
             // Menus, the Dock and other windows above the normal level take the point.
