@@ -60,6 +60,9 @@ struct Snapshot: Equatable, Sendable {
     var windows: [ObservedWindow]
     var minimized: [WindowID]
     var focused: WindowID?
+    var focusedApp: String?
+    /// Every window that still exists, on any Space. Unset means unknown.
+    var existing: Set<WindowID>?
 }
 
 struct Placement: Equatable, Sendable {
@@ -94,6 +97,8 @@ struct Workspace: Equatable, Sendable {
     var zoomed: WindowID?
     var cleanSet: [WindowID]?
     var activeTile = 0
+    /// The limit last applied, to notice when it changed while the Space was away.
+    var appliedLimit: Int?
 }
 
 struct TilingState: Equatable {
@@ -141,7 +146,8 @@ struct TilingState: Equatable {
             }
         }
 
-        userFloats = userFloats.filter { observed[$0] != nil || minimized.contains($0) }
+        // Floats on other Spaces or in hidden apps are missing from the snapshot but still exist.
+        if let existing = snapshot.existing { userFloats = userFloats.filter(existing.contains) }
         pendingCenter = pendingCenter.filter { observed[$0] != nil }
 
         for window in added where activeKeys.contains(window.key) {
@@ -149,7 +155,17 @@ struct TilingState: Equatable {
             notices += place(window, context: context)
         }
 
-        if let id = snapshot.focused { noteFocus(id, context: context) }
+        // Settings, rotation or another Space may have changed what this screen allows.
+        for key in activeKeys where workspaces[key] != nil {
+            let limit = limit(on: key, context: context)
+            let grew = workspaces[key]?.appliedLimit.map { limit > $0 } ?? false
+            normalize(key, pull: grew, context: context)
+            workspaces[key]?.appliedLimit = limit
+        }
+
+        if let id = snapshot.focused {
+            noteFocus(id, app: snapshot.focusedApp, activeKeys: activeKeys, context: context)
+        }
         focused = snapshot.focused
         return notices
     }
@@ -242,8 +258,19 @@ struct TilingState: Equatable {
         }
     }
 
-    private mutating func noteFocus(_ id: WindowID, context: TilingContext) {
-        guard let key = key(of: id), var workspace = workspaces[key] else { return }
+    private mutating func noteFocus(
+        _ id: WindowID, app: String?, activeKeys: Set<WorkspaceKey>, context: TilingContext
+    ) {
+        guard let key = key(of: id), var workspace = workspaces[key] else {
+            // A floating or excluded window was clicked. A dialog of the zoomed app is not "another window".
+            guard let app else { return }
+            for active in activeKeys {
+                if let zoomed = workspaces[active]?.zoomed, apps[zoomed] != app {
+                    workspaces[active]?.zoomed = nil
+                }
+            }
+            return
+        }
         if let tile = workspace.tiles.firstIndex(where: { $0.windows.contains(id) }) {
             workspace.tiles[tile].windows.removeAll { $0 == id }
             workspace.tiles[tile].windows.insert(id, at: 0)
@@ -319,7 +346,8 @@ struct TilingState: Equatable {
 
     /// Brings the tiles in line with the screen's limit and, when asked, fills freed room from waiting windows.
     private mutating func normalize(_ key: WorkspaceKey, pull: Bool, context: TilingContext) {
-        guard var workspace = workspaces[key] else { return }
+        // Limits of a Space that isn't showing are unknown; it is normalized when it returns.
+        guard var workspace = workspaces[key], area(of: key, context: context) != nil else { return }
         let limit = limit(on: key, context: context)
 
         while workspace.tiles.count > limit
@@ -415,6 +443,13 @@ struct TilingState: Equatable {
         workspaces[bKey]?.tiles[bTile].windows.removeAll { $0 == b }
         workspaces[aKey]?.tiles[aTile].windows.insert(b, at: 0)
         workspaces[bKey]?.tiles[bTile].windows.insert(a, at: 0)
+        guard aKey != bKey else { return }
+        // Each window now belongs to the other screen, with its modes left behind.
+        for key in [aKey, bKey] {
+            let clean = workspaces[key]?.cleanSet
+            workspaces[key]?.cleanSet = clean?.map { $0 == a ? b : $0 == b ? a : $0 }
+            if let zoomed = workspaces[key]?.zoomed, zoomed == a || zoomed == b { workspaces[key]?.zoomed = nil }
+        }
     }
 
     mutating func makePrimary(_ id: WindowID, context: TilingContext) {
@@ -551,7 +586,8 @@ struct TilingState: Equatable {
     }
 
     mutating func toggleZoom(_ id: WindowID, context: TilingContext) {
-        guard let key = key(of: id) else { return }
+        guard let key = key(of: id), workspaces[key]?.tiles.contains(where: { $0.windows.contains(id) }) == true
+        else { return }
         let current = workspaces[key]?.zoomed
         workspaces[key]?.zoomed = current == id ? nil : id
     }

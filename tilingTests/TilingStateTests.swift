@@ -365,6 +365,122 @@ struct TilingStateTests {
         #expect(state.workspaces[left]?.cleanSet == [1])
     }
 
+    // MARK: Spaces and limits
+
+    private var otherSpace: WorkspaceKey { WorkspaceKey(display: "L", space: 2) }
+
+    private func otherSpaceContext(policy: TilingPolicy = TilingPolicy(gap: 0)) -> TilingContext {
+        TilingContext(
+            screens: [ScreenGeometry(key: otherSpace, area: leftArea)], policy: policy, minimumSize: { _ in .zero })
+    }
+
+    @Test func aWindowLeavingAnInactiveSpaceDoesNotCollapseTheRest() {
+        var state = filled([1, 2, 3])
+        _ = state.reconcile(snapshot([3], on: otherSpace), context: otherSpaceContext())
+        #expect(tiles(state) == [[1], [2]])
+    }
+
+    @Test func joiningAnotherSpaceDoesNotCollapseTheOldOne() {
+        var state = filled([1, 2, 3])
+        _ = state.reconcile(snapshot([9], on: otherSpace), context: otherSpaceContext())
+        let joined = state.join(3, to: otherSpace, context: otherSpaceContext())
+        #expect(joined)
+        #expect(tiles(state) == [[1], [2]])
+    }
+
+    @Test func floatsSurviveASpaceSwitch() {
+        var state = filled([1, 2])
+        state.toggleFloat(2, context: context())
+        var away = snapshot([], on: otherSpace)
+        away.existing = [1, 2]
+        _ = state.reconcile(away, context: otherSpaceContext())
+        _ = state.reconcile(snapshot([1, 2]), context: context())
+        #expect(tiles(state) == [[1]])
+    }
+
+    @Test func floatsAreForgottenOnceTheWindowIsGone() {
+        var state = filled([1, 2])
+        state.toggleFloat(2, context: context())
+        var gone = snapshot([1])
+        gone.existing = [1]
+        _ = state.reconcile(gone, context: context())
+        #expect(state.userFloats.isEmpty)
+    }
+
+    @Test func aLowerCountSetElsewhereAppliesOnReturn() {
+        var state = filled([1, 2, 3])
+        var ctx = context()
+        ctx.policy.count = 2
+        _ = state.reconcile(snapshot([1, 2, 3]), context: ctx)
+        #expect(tiles(state) == [[1], [2, 3]])
+    }
+
+    @Test func aHigherLimitSplitsWaitingWindowsOnTheNextScan() {
+        var ctx = context()
+        ctx.policy.count = 2
+        var state = filled([1, 2, 3], context: ctx)
+        #expect(tiles(state).count == 2)
+        ctx.policy.count = 3
+        _ = state.reconcile(snapshot([1, 2, 3]), context: ctx)
+        #expect(tiles(state).count == 3)
+    }
+
+    // MARK: Focus and Clean Space across windows
+
+    @Test func focusOnAnUntrackedWindowEndsFocusMode() {
+        var state = filled([1, 2])
+        state.toggleZoom(1, context: context())
+        var snap = snapshot([1, 2], focused: 77)
+        snap.focusedApp = "calculator"
+        _ = state.reconcile(snap, context: context())
+        #expect(state.workspaces[left]?.zoomed == nil)
+    }
+
+    @Test func aDialogOfTheZoomedAppKeepsFocusMode() {
+        var state = filled([1, 2])
+        state.toggleZoom(1, context: context())
+        var snap = snapshot([1, 2], focused: 77)
+        snap.focusedApp = "app"
+        _ = state.reconcile(snap, context: context())
+        #expect(state.workspaces[left]?.zoomed == 1)
+    }
+
+    @Test func aCrossScreenSwapKeepsEachWindowInOnePlace() {
+        let ctx = context(oneScreen: false)
+        var state = TilingState()
+        _ = state.reconcile(
+            Snapshot(
+                windows: [ObservedWindow(id: 1, app: "app", key: left, frame: .zero),
+                    ObservedWindow(id: 2, app: "app", key: right, frame: .zero)],
+                minimized: [], focused: nil), context: ctx)
+        state.toggleClean(on: left, active: 1)
+        state.swap(1, with: 2, context: ctx)
+        let plan = peek(state, ctx)
+        #expect(Set(plan.placements.map(\.id)).count == plan.placements.count)
+        #expect(state.workspaces[left]?.cleanSet == [2])
+    }
+
+    @Test func aCrossScreenSwapEndsFocusModeOfTheMovedWindow() {
+        let ctx = context(oneScreen: false)
+        var state = TilingState()
+        _ = state.reconcile(
+            Snapshot(
+                windows: [ObservedWindow(id: 1, app: "app", key: left, frame: .zero),
+                    ObservedWindow(id: 2, app: "app", key: right, frame: .zero)],
+                minimized: [], focused: nil), context: ctx)
+        state.toggleZoom(1, context: ctx)
+        state.swap(1, with: 2, context: ctx)
+        #expect(state.workspaces[left]?.zoomed == nil)
+    }
+
+    @Test func focusModeIgnoresWindowsWithoutATile() {
+        let ctx = context(policy: TilingPolicy(gap: 0, whenFull: .floatInMiddle))
+        var state = filled([1, 2, 3], context: ctx)
+        _ = state.reconcile(snapshot([1, 2, 3, 4]), context: ctx)
+        state.toggleZoom(4, context: ctx)
+        #expect(state.workspaces[left]?.zoomed == nil)
+    }
+
     // MARK: Sizes
 
     @Test func sizesBelongToPositionsNotWindows() {

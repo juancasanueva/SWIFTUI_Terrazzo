@@ -5,13 +5,19 @@ struct SettingsView: View {
     @Bindable var controller: AppController
 
     var body: some View {
-        TabView {
+        TabView(selection: $controller.settingsTab) {
             GeneralSettings(controller: controller).tabItem { Label("General", systemImage: "gearshape") }
+                .tag(AppController.SettingsTab.general)
             LayoutSettings(controller: controller).tabItem { Label("Layout", systemImage: "square.grid.2x2") }
+                .tag(AppController.SettingsTab.layout)
             HighlightSettings(controller: controller).tabItem { Label("Highlight", systemImage: "sparkles") }
+                .tag(AppController.SettingsTab.highlight)
             KeyboardSettings(controller: controller).tabItem { Label("Keyboard", systemImage: "keyboard") }
+                .tag(AppController.SettingsTab.keyboard)
             AppsSettings(controller: controller).tabItem { Label("Apps", systemImage: "app.badge") }
+                .tag(AppController.SettingsTab.apps)
             AboutSettings(controller: controller).tabItem { Label("About", systemImage: "info.circle") }
+                .tag(AppController.SettingsTab.about)
         }
         .frame(width: 560, height: 560)
         .onAppear { NSApp.activate() }

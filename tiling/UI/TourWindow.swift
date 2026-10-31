@@ -5,7 +5,8 @@ enum TourWindow {
     private static var window: NSWindow?
 
     static func show(controller: AppController) {
-        if window == nil {
+        // A closed tour starts over; one still open keeps its place.
+        if window?.isVisible != true {
             let created = NSWindow(contentViewController: NSHostingController(rootView: TourView(controller: controller)))
             created.title = String(localized: "Welcome to Tiling")
             created.styleMask = [.titled, .closable]

@@ -173,8 +173,8 @@ struct ShortcutMap: Codable, Equatable, Sendable {
             return binding == Self.off ? nil : KeyCombo(string: binding)
         }
         let suffix = action.defaultSuffix
-        if action == .tabViewBackward, let forward = combo(for: .tabView) {
-            return KeyCombo(key: forward.key, modifiers: forward.modifiers.union(.shift))
+        if action == .tabViewBackward {
+            return combo(for: .tabView).map { KeyCombo(key: $0.key, modifiers: $0.modifiers.union(.shift)) }
         }
         if action == .tabView {
             return KeyCombo(key: suffix.key, modifiers: .option)

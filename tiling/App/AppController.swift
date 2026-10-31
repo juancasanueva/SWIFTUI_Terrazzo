@@ -52,6 +52,7 @@ final class AppController {
         didSet {
             guard rules != oldValue else { return }
             if !isLoadingConfig { save(rules, to: rulesFile) }
+            state.refreshLimits(context: context())
             scheduleRefresh(pid: nil)
         }
     }
@@ -76,6 +77,7 @@ final class AppController {
     var hotKeysFailed = false
     var state = TilingState()
     var noPeekOn = false
+    var settingsTab = SettingsTab.general
     var isSetupWindowOpen = false
     /// The app in front, for the panel's per-app switch.
     var frontApp: NSRunningApplication?
@@ -104,7 +106,7 @@ final class AppController {
         if stageManagerOn { return .stageManager }
         let key = pointerKey()
         let workspace = key.flatMap { state.workspaces[$0] }
-        return .tiling(count: workspace?.tiles.count ?? 0, focus: workspace?.zoomed != nil)
+        return .tiling(count: workspace?.tiles.reduce(0) { $0 + $1.windows.count } ?? 0, focus: workspace?.zoomed != nil)
     }
 
     var hasCleanSpace: Bool { state.workspaces.values.contains { $0.cleanSet != nil } }
@@ -129,11 +131,20 @@ final class AppController {
         ] {
             workspace.addObserver(forName: name, object: nil, queue: .main, using: refreshAll)
         }
+        // A launching app has no windows yet, and may not answer until it finishes starting.
+        workspace.addObserver(forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) {
+            [weak self] _ in
+            for delay in [1.0, 3.0] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { self?.scheduleRefresh(pid: nil) }
+            }
+        }
         let endClean: (Notification) -> Void = { [weak self] _ in self?.endCleanSpaces() }
         workspace.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main, using: endClean)
         workspace.addObserver(forName: NSWorkspace.sessionDidResignActiveNotification, object: nil, queue: .main, using: endClean)
         DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name("com.apple.screenIsLocked"), object: nil, queue: .main, using: endClean)
+        DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsUnlocked"), object: nil, queue: .main, using: refreshAll)
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: refreshAll)
 
@@ -333,7 +344,8 @@ final class AppController {
     }
 
     private func refreshNow() {
-        guard isOperating, !dragTracker.isActive else { return }
+        // A locked session reports no windows at all; believing it would forget the whole layout.
+        guard isOperating, !dragTracker.isActive, !SystemState.isSessionLocked else { return }
         let all = pendingAll
         let pids = pendingPids
         pendingAll = false
@@ -368,9 +380,18 @@ final class AppController {
             recentWindows.insert(focused, at: 0)
         }
         let snapshot = Snapshot(
-            windows: windows, minimized: records.filter(\.isMinimized).map(\.id), focused: focused)
+            windows: windows, minimized: records.filter(\.isMinimized).map(\.id), focused: focused,
+            focusedApp: NSWorkspace.shared.frontmostApplication?.bundleIdentifier, existing: Self.existingWindows())
         show(state.reconcile(snapshot, context: context))
         apply(context: context)
+    }
+
+    /// Window numbers on every Space, hidden or not. Uses numbers only.
+    private static func existingWindows() -> Set<WindowID>? {
+        guard let list = CGWindowListCopyWindowInfo(.optionAll, kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+        return Set(list.compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
     }
 
     private func key(for record: WindowRecord, displays: [DisplayInfo]) -> WorkspaceKey? {
@@ -431,8 +452,8 @@ final class AppController {
         let showing = Set(plan.showing)
         for id in plan.showing where !lastShowing.contains(id) { ax.raise(id) }
         lastShowing = showing
-        for workspace in state.workspaces.values {
-            if let zoomed = workspace.zoomed { ax.raise(zoomed) }
+        for screen in context.screens {
+            if let zoomed = state.workspaces[screen.key]?.zoomed { ax.raise(zoomed) }
         }
         if let focused = state.focused, showing.contains(focused) { ax.raise(focused) }
 
@@ -525,6 +546,10 @@ final class AppController {
     }
 
     // MARK: Shortcuts
+
+    enum SettingsTab: Hashable {
+        case general, layout, highlight, keyboard, apps, about
+    }
 
     func perform(_ action: ShortcutAction) {
         guard isOperating else { return }
@@ -636,8 +661,8 @@ final class AppController {
         apply()
     }
 
-    func toggleCleanSpace() {
-        guard let key = activeKey() else { return }
+    func toggleCleanSpace(on chosen: WorkspaceKey? = nil) {
+        guard let key = chosen ?? activeKey() else { return }
         hydrate(key)
         state.toggleClean(on: key, active: ax.focusedWindow().flatMap { state.key(of: $0) == key ? $0 : nil })
         lastApplied = [:]
@@ -752,7 +777,9 @@ final class AppController {
 
     func finishResize(id: WindowID, frame: CGRect) {
         let context = context()
+        // In Focus and Clean Space the window isn't in its slot, so the drag says nothing about the slot.
         guard let key = state.key(of: id), state.workspaces[key]?.zoomed == nil,
+            state.workspaces[key]?.cleanSet == nil,
             let index = state.workspaces[key]?.tiles.firstIndex(where: { $0.windows.contains(id) }),
             let slot = state.slotFrames(on: key, context: context)[safe: index]
         else { return }

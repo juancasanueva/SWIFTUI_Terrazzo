@@ -129,6 +129,12 @@ struct ConfigTests {
         #expect(map.combo(for: .tabViewBackward)?.symbols == "⇧⌘E")
     }
 
+    @Test func turningOffTabViewAlsoTurnsOffItsBackwardShortcut() {
+        var map = ShortcutMap()
+        map.bindings[ShortcutAction.tabView.rawValue] = ShortcutMap.off
+        #expect(map.combo(for: .tabViewBackward) == nil)
+    }
+
     @Test func conflictsListOwnAndSystemShortcuts() throws {
         let map = ShortcutMap()
         let own = try #require(KeyCombo(string: "ctrl+opt+f"))

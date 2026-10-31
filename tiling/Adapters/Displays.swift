@@ -91,6 +91,11 @@ final class SpaceReader {
 }
 
 enum SystemState {
+    static var isSessionLocked: Bool {
+        guard let session = CGSessionCopyCurrentDictionary() as? [String: Any] else { return false }
+        return (session["CGSSessionScreenIsLocked"] as? NSNumber)?.boolValue ?? false
+    }
+
     static var stageManagerEnabled: Bool {
         let domain = "com.apple.WindowManager" as CFString
         CFPreferencesAppSynchronize(domain)

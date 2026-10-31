@@ -96,6 +96,8 @@ struct MenuPanelView: View {
 
     private var statusText: String {
         switch controller.status {
+        case .tiling(1, false): String(localized: "Tiling 1 window.")
+        case .tiling(1, true): String(localized: "Focus mode · 1 window.")
         case .tiling(let count, false): String(localized: "Tiling \(count) windows.")
         case .tiling(let count, true): String(localized: "Focus mode · \(count) windows.")
         case .stageManager: String(localized: "Paused while Stage Manager is on.")
@@ -173,6 +175,10 @@ struct MenuPanelView: View {
                         .disabled(count > maxCount)
                 }
             }
+            if vertical {
+                Text("Columns isn't available on a vertical screen.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
             if maxCount < 4 {
                 Text("This screen is too small for more than \(maxCount) windows in this layout.")
                     .font(.caption2).foregroundStyle(.secondary)
@@ -210,7 +216,7 @@ struct MenuPanelView: View {
                 isOn: Binding(
                     get: {
                         controller.pointerKey().flatMap { controller.state.workspaces[$0]?.cleanSet } != nil
-                    }, set: { _ in controller.toggleCleanSpace() }))
+                    }, set: { _ in controller.toggleCleanSpace(on: controller.pointerKey()) }))
         }
         .disabled(!controller.isOperating)
     }
@@ -227,14 +233,30 @@ struct MenuPanelView: View {
         }
     }
 
+    /// Warns when shortcuts could not all be registered, and reads Off when disabled.
+    @ViewBuilder
+    private var keyboardLabel: some View {
+        if !controller.shortcuts.enabled {
+            Text("Keyboard shortcuts: Off")
+        } else if controller.hotKeysFailed {
+            Label("Keyboard shortcuts", systemImage: "exclamationmark.triangle")
+        } else {
+            Text("Keyboard shortcuts")
+        }
+    }
+
     private var footer: some View {
         HStack {
             SettingsLink { Text("Settings") }
                 .keyboardShortcut(",")
                 .simultaneousGesture(TapGesture().onEnded { NSApp.activate() })
             Spacer()
-            Text(controller.shortcuts.enabled ? "" : "Keyboard shortcuts: Off")
-                .font(.caption2).foregroundStyle(.secondary)
+            SettingsLink { keyboardLabel }
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        controller.settingsTab = .keyboard
+                        NSApp.activate()
+                    })
             Spacer()
             Button("Quit Tiling") { NSApp.terminate(nil) }
         }

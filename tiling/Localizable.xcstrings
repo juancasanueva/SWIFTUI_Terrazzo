@@ -1009,6 +1009,34 @@
         }
       }
     },
+    "Columns isn't available on a vertical screen.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Columnas no está disponible en una pantalla vertical."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "縦向きの画面では列を使用できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "세로 화면에서는 열을 사용할 수 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "竖屏上无法使用列。"
+          }
+        }
+      }
+    },
     "Config folder": {
       "localizations": {
         "es": {
@@ -1397,6 +1425,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "专注模式 · %lld 个窗口。"
+          }
+        }
+      }
+    },
+    "Focus mode · 1 window.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo enfoque · 1 ventana."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォーカスモード · 1 個のウインドウ。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포커스 모드 · 윈도우 1개."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注模式 · 1 个窗口。"
           }
         }
       }
@@ -3749,6 +3805,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在平铺 %lld 个窗口。"
+          }
+        }
+      }
+    },
+    "Tiling 1 window.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organizando 1 ventana."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 個のウインドウをタイル表示中。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "윈도우 1개 타일링 중."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在平铺 1 个窗口。"
           }
         }
       }

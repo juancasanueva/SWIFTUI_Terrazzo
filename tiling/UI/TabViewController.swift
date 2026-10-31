@@ -98,7 +98,7 @@ final class TabViewController {
     private func buildScreens() -> [TabScreen] {
         let context = controller.context()
         let excludedRecords = controller.ax.scan(pid: nil)
-        return Displays.current().map { display in
+        return orderedDisplays().map { display in
             let onScreen = excludedRecords.filter {
                 Displays.display(for: $0.frame, in: [display]) != nil
                     && Displays.display(for: $0.frame, in: Displays.current())?.uuid == display.uuid
@@ -135,6 +135,11 @@ final class TabViewController {
                 id: display.uuid, name: display.name, frame: display.frame, entries: entries, minimized: minimized)
         }
         .filter { !$0.entries.isEmpty || !$0.minimized.isEmpty }
+    }
+
+    /// Left to right as arranged in System Settings, not primary display first.
+    private func orderedDisplays() -> [DisplayInfo] {
+        Displays.current().sorted { ($0.frame.minX, $0.frame.minY) < ($1.frame.minX, $1.frame.minY) }
     }
 
     private func entry(_ record: WindowRecord, frame: CGRect) -> TabEntry {

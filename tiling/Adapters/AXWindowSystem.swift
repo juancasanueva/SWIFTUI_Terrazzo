@@ -73,6 +73,8 @@ final class AXWindowSystem {
         let bundleID = app.bundleIdentifier ?? "pid.\(app.processIdentifier)"
         let appName = app.localizedName ?? bundleID
         return windows.compactMap { window in
+            // A hung app must not stall the main thread for long.
+            AXUIElementSetMessagingTimeout(window, Self.messagingTimeout)
             var id: CGWindowID = 0
             guard axElementGetWindow(window, &id) == .success, id != 0 else { return nil }
             guard let frame = Self.frame(of: window) else { return nil }
@@ -216,9 +218,12 @@ final class AXWindowSystem {
         guard AXObserverCreate(pid, axNotificationCallback, &observer) == .success, let observer else { return }
         let element = AXUIElementCreateApplication(pid)
         let context = Unmanaged.passUnretained(self).toOpaque()
+        var failures = 0
         for name in Self.appNotifications {
-            AXObserverAddNotification(observer, element, name as CFString, context)
+            if AXObserverAddNotification(observer, element, name as CFString, context) != .success { failures += 1 }
         }
+        // An app still launching refuses everything. Leaving it unstored means the next scan tries again.
+        guard failures < Self.appNotifications.count else { return }
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
         observers[pid] = observer
     }
