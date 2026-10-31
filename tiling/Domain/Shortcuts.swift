@@ -1,0 +1,234 @@
+import Foundation
+
+struct KeyModifiers: OptionSet, Hashable, Codable, Sendable {
+    let rawValue: Int
+    static let control = KeyModifiers(rawValue: 1)
+    static let option = KeyModifiers(rawValue: 2)
+    static let shift = KeyModifiers(rawValue: 4)
+    static let command = KeyModifiers(rawValue: 8)
+
+    /// In the order macOS displays modifiers.
+    fileprivate static let ordered: [(KeyModifiers, String, String)] = [
+        (.control, "ctrl", "⌃"), (.option, "opt", "⌥"), (.shift, "shift", "⇧"), (.command, "cmd", "⌘"),
+    ]
+}
+
+/// The keys a shortcut can use. Raw values are the names used in `shortcuts.json`.
+enum ShortcutKey: String, CaseIterable, Hashable, Sendable {
+    case a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z
+    case n0 = "0", n1 = "1", n2 = "2", n3 = "3", n4 = "4", n5 = "5", n6 = "6", n7 = "7", n8 = "8", n9 = "9"
+    case left, right, up, down, `return`, tab, space
+    case grave = "`", minus = "-", equal = "=", leftBracket = "[", rightBracket = "]"
+    case backslash = "\\", semicolon = ";", quote = "'", comma = ",", period = ".", slash = "/"
+
+    var symbol: String {
+        switch self {
+        case .left: "←"
+        case .right: "→"
+        case .up: "↑"
+        case .down: "↓"
+        case .return: "↩"
+        case .tab: "⇥"
+        case .space: "␣"
+        default: rawValue.uppercased()
+        }
+    }
+
+    /// macOS virtual key code.
+    var keyCode: UInt32 {
+        Self.keyCodes[self] ?? 0
+    }
+
+    init?(keyCode: UInt32) {
+        guard let match = Self.keyCodes.first(where: { $0.value == keyCode })?.key else { return nil }
+        self = match
+    }
+
+    private static let keyCodes: [ShortcutKey: UInt32] = [
+        .a: 0, .s: 1, .d: 2, .f: 3, .h: 4, .g: 5, .z: 6, .x: 7, .c: 8, .v: 9, .b: 11, .q: 12, .w: 13, .e: 14,
+        .r: 15, .y: 16, .t: 17, .n1: 18, .n2: 19, .n3: 20, .n4: 21, .n6: 22, .n5: 23, .equal: 24, .n9: 25,
+        .n7: 26, .minus: 27, .n8: 28, .n0: 29, .rightBracket: 30, .o: 31, .u: 32, .leftBracket: 33, .i: 34,
+        .p: 35, .return: 36, .l: 37, .j: 38, .quote: 39, .k: 40, .semicolon: 41, .backslash: 42, .comma: 43,
+        .slash: 44, .n: 45, .m: 46, .period: 47, .tab: 48, .space: 49, .grave: 50, .left: 123, .right: 124,
+        .down: 125, .up: 126,
+    ]
+}
+
+struct KeyCombo: Hashable, Sendable {
+    var key: ShortcutKey
+    var modifiers: KeyModifiers
+
+    init(key: ShortcutKey, modifiers: KeyModifiers) {
+        self.key = key
+        self.modifiers = modifiers
+    }
+
+    /// Parses config syntax such as `ctrl+opt+left`.
+    init?(string: String) {
+        var parts = string.lowercased().split(separator: "+", omittingEmptySubsequences: false).map(String.init)
+        guard let keyName = parts.popLast(), let key = ShortcutKey(rawValue: keyName) else { return nil }
+        var modifiers: KeyModifiers = []
+        for part in parts {
+            guard let match = KeyModifiers.ordered.first(where: { $0.1 == part }) else { return nil }
+            modifiers.insert(match.0)
+        }
+        self.init(key: key, modifiers: modifiers)
+    }
+
+    var string: String {
+        (KeyModifiers.ordered.filter { modifiers.contains($0.0) }.map(\.1) + [key.rawValue]).joined(separator: "+")
+    }
+
+    var symbols: String {
+        KeyModifiers.ordered.filter { modifiers.contains($0.0) }.map(\.2).joined() + key.symbol
+    }
+}
+
+enum ShortcutPrefix: String, Codable, CaseIterable, Sendable {
+    case controlOption = "ctrl+opt"
+    case optionCommand = "opt+cmd"
+    case controlShift = "ctrl+shift"
+
+    var modifiers: KeyModifiers {
+        switch self {
+        case .controlOption: [.control, .option]
+        case .optionCommand: [.option, .command]
+        case .controlShift: [.control, .shift]
+        }
+    }
+
+    var symbols: String { KeyCombo(key: .a, modifiers: modifiers).symbols.replacingOccurrences(of: "A", with: "") }
+}
+
+enum ShortcutAction: String, CaseIterable, Codable, Sendable {
+    case swapLeft, swapRight, swapUp, swapDown
+    case makePrimary, nextWindow, previousWindow, nextInTile, previousInTile, tabView, tabViewBackward
+    case bigger, smaller, resetSizes
+    case float, alwaysFloat, focus, noPeek, cleanSpace, retile
+    case tile1, tile2, tile3, tile4, tile5
+
+    fileprivate var defaultSuffix: (key: ShortcutKey, extra: KeyModifiers) {
+        switch self {
+        case .swapLeft: (.left, [])
+        case .swapRight: (.right, [])
+        case .swapUp: (.up, [])
+        case .swapDown: (.down, [])
+        case .makePrimary: (.return, [])
+        case .nextWindow: (.rightBracket, [])
+        case .previousWindow: (.leftBracket, [])
+        case .nextInTile: (.grave, [])
+        case .previousInTile: (.grave, .shift)
+        case .tabView: (.tab, [])
+        case .tabViewBackward: (.tab, .shift)
+        case .bigger: (.equal, [])
+        case .smaller: (.minus, [])
+        case .resetSizes: (.n0, [])
+        case .float: (.f, [])
+        case .alwaysFloat: (.f, .shift)
+        case .focus: (.z, [])
+        case .noPeek: (.d, [])
+        case .cleanSpace: (.p, [])
+        case .retile: (.r, [])
+        case .tile1: (.n1, .command)
+        case .tile2: (.n2, .command)
+        case .tile3: (.n3, .command)
+        case .tile4: (.n4, .command)
+        case .tile5: (.n5, .command)
+        }
+    }
+
+    var tileCount: Int? {
+        switch self {
+        case .tile1: 1
+        case .tile2: 2
+        case .tile3: 3
+        case .tile4: 4
+        case .tile5: 5
+        default: nil
+        }
+    }
+
+    var isTabView: Bool { self == .tabView || self == .tabViewBackward }
+}
+
+enum ShortcutConflict: Equatable, Sendable {
+    case shortcut(ShortcutAction)
+    case system
+}
+
+/// `~/.config/tiling/shortcuts.json`. Only keys the user changed are stored in `bindings`.
+struct ShortcutMap: Codable, Equatable, Sendable {
+    static let off = "off"
+
+    var enabled = true
+    var prefix: ShortcutPrefix = .controlOption
+    /// Action name to key combo, or `off`.
+    var bindings: [String: String] = [:]
+    /// Modifiers shared by the window-count shortcuts, in config syntax without a key.
+    var tileModifiers: String?
+
+    func combo(for action: ShortcutAction) -> KeyCombo? {
+        if let binding = bindings[action.rawValue] {
+            return binding == Self.off ? nil : KeyCombo(string: binding)
+        }
+        let suffix = action.defaultSuffix
+        if action == .tabViewBackward, let forward = combo(for: .tabView) {
+            return KeyCombo(key: forward.key, modifiers: forward.modifiers.union(.shift))
+        }
+        if action == .tabView {
+            return KeyCombo(key: suffix.key, modifiers: .option)
+        }
+        if action.tileCount != nil, let tileModifiers,
+            let shared = KeyCombo(string: "\(tileModifiers)+\(suffix.key.rawValue)") {
+            return shared
+        }
+        return KeyCombo(key: suffix.key, modifiers: prefix.modifiers.union(suffix.extra))
+    }
+
+    /// The shortcuts to register with the system right now.
+    var active: [ShortcutAction: KeyCombo] {
+        guard enabled else { return [:] }
+        var result: [ShortcutAction: KeyCombo] = [:]
+        for action in ShortcutAction.allCases {
+            if let combo = combo(for: action) { result[action] = combo }
+        }
+        return result
+    }
+
+    mutating func reset(_ action: ShortcutAction) {
+        bindings[action.rawValue] = nil
+    }
+
+    mutating func resetAll() {
+        bindings = [:]
+        tileModifiers = nil
+        prefix = .controlOption
+    }
+
+    mutating func setTileModifiers(_ modifiers: KeyModifiers) {
+        let combo = KeyCombo(key: .n1, modifiers: modifiers).string
+        tileModifiers = String(combo.dropLast(2))
+        for action in ShortcutAction.allCases where action.tileCount != nil { bindings[action.rawValue] = nil }
+    }
+
+    func conflicts(for combo: KeyCombo, action: ShortcutAction, system: Set<KeyCombo>) -> [ShortcutConflict] {
+        var result: [ShortcutConflict] = ShortcutAction.allCases
+            .filter { $0 != action && self.combo(for: $0) == combo }
+            .map { .shortcut($0) }
+        if system.contains(combo) { result.append(.system) }
+        return result
+    }
+
+    /// Free keys with the current prefix, for offering when the chosen keys are taken.
+    func suggestions(system: Set<KeyCombo>, limit: Int) -> [KeyCombo] {
+        var result: [KeyCombo] = []
+        for key in ShortcutKey.allCases {
+            let candidate = KeyCombo(key: key, modifiers: prefix.modifiers)
+            if conflicts(for: candidate, action: .retile, system: system).isEmpty, combo(for: .retile) != candidate {
+                result.append(candidate)
+            }
+            if result.count == limit { break }
+        }
+        return result
+    }
+}
