@@ -429,7 +429,9 @@ final class AppController {
         case .light: NSApp.appearance = NSAppearance(named: .aqua)
         case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
         }
-        NSApp.applicationIconImage = AppIconRenderer.image(for: settings.iconStyle)
+        // Nil restores the icon in the app's bundle.
+        NSApp.applicationIconImage = settings.iconStyle.usesBundledIcon
+            ? nil : AppIconRenderer.image(for: settings.iconStyle)
     }
 
     private func applyLoginItem() {

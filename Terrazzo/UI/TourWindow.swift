@@ -150,7 +150,7 @@ enum AppIconRenderer {
             NSColor(srgbRed: red, green: green, blue: blue, alpha: 1)
         }
         switch style {
-        case .washi: return (color(0.96, 0.93, 0.86), color(0.87, 0.82, 0.72), color(0.24, 0.20, 0.17))
+        case .terrazzo, .washi: return (color(0.96, 0.93, 0.86), color(0.87, 0.82, 0.72), color(0.24, 0.20, 0.17))
         case .lantern: return (color(0.98, 0.72, 0.30), color(0.87, 0.36, 0.14), color(1, 0.96, 0.86))
         case .indigo: return (color(0.20, 0.25, 0.50), color(0.09, 0.11, 0.28), color(0.86, 0.89, 1))
         case .sunset: return (color(0.98, 0.56, 0.42), color(0.55, 0.24, 0.55), color(1, 0.94, 0.88))
@@ -161,6 +161,7 @@ enum AppIconRenderer {
     }
 
     static func image(for style: IconStyle) -> NSImage {
+        if style.usesBundledIcon, let bundled = NSImage(named: NSImage.applicationIconName) { return bundled }
         let (top, bottom, panes) = colors(style)
         let side: CGFloat = 512
         return NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in

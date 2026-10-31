@@ -14,7 +14,10 @@ enum AppearanceChoice: String, Codable, CaseIterable, Sendable {
 }
 
 enum IconStyle: String, Codable, CaseIterable, Sendable {
-    case washi, lantern, indigo, sunset, torii, glass, focus
+    case terrazzo, washi, lantern, indigo, sunset, torii, glass, focus
+
+    /// The icon in the app's bundle, rather than one drawn at launch.
+    var usesBundledIcon: Bool { self == .terrazzo }
 }
 
 struct ScreenEdges: Codable, Equatable, Sendable {
@@ -96,7 +99,7 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// Language code, or unset to follow the Mac.
     var language: String?
     var openAtLogin = true
-    var iconStyle: IconStyle = .washi
+    var iconStyle: IconStyle = .terrazzo
 }
 
 extension AppSettings {
