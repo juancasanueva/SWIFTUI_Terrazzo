@@ -142,6 +142,25 @@ struct TilingStateTests {
         #expect(tiles(state)[2] == [3, 4])
     }
 
+    @Test func aWindowAloneInItsTileComesBackWithItsOwnTile() {
+        var state = filled([1, 2])
+        _ = state.reconcile(snapshot([2], minimized: [1]), context: context())
+        #expect(tiles(state) == [[2]])
+        _ = state.reconcile(snapshot([1, 2]), context: context())
+        #expect(tiles(state) == [[2], [1]])
+    }
+
+    @Test func aMinimizedStackWindowFindsItsTileAfterTilesShift() {
+        var state = filled([1, 2, 3])
+        _ = state.reconcile(snapshot([1, 2, 3], focused: 3), context: context())
+        _ = state.reconcile(snapshot([1, 2, 3, 4]), context: context())
+        _ = state.reconcile(snapshot([1, 2, 3], minimized: [4]), context: context())
+        _ = state.reconcile(snapshot([2, 3], minimized: [4]), context: context())
+        #expect(tiles(state) == [[2], [3]])
+        _ = state.reconcile(snapshot([2, 3, 4]), context: context())
+        #expect(tiles(state) == [[2], [4, 3]])
+    }
+
     @Test func reducingTheCountMergesTheLastTileAndIncreasingSplitsItBack() {
         var state = filled([1, 2, 3])
         _ = state.setCount(2, on: left, context: context())

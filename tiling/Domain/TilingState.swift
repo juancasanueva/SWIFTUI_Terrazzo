@@ -97,9 +97,10 @@ struct Workspace: Equatable, Sendable {
 }
 
 struct TilingState: Equatable {
+    /// Where a minimized stack member returns: the tile holding the window it shared with.
     private struct Origin: Equatable {
         var key: WorkspaceKey
-        var tile: Int
+        var mate: WindowID
     }
 
     var workspaces: [WorkspaceKey: Workspace] = [:]
@@ -191,8 +192,8 @@ struct TilingState: Equatable {
 
     private mutating func remove(_ id: WindowID, minimized: Bool, context: TilingContext) {
         guard let key = key(of: id), var workspace = workspaces[key] else { return }
-        if minimized, let tile = workspace.tiles.firstIndex(where: { $0.windows.contains(id) }) {
-            minimizedOrigins[id] = Origin(key: key, tile: tile)
+        if minimized, let mate = workspace.tiles.first(where: { $0.windows.contains(id) })?.windows.first(where: { $0 != id }) {
+            minimizedOrigins[id] = Origin(key: key, mate: mate)
         }
         let tilesBefore = workspace.tiles.count
         for index in workspace.tiles.indices { workspace.tiles[index].windows.removeAll { $0 == id } }
@@ -214,8 +215,8 @@ struct TilingState: Equatable {
         if workspace.cleanSet != nil { workspace.cleanSet?.append(window.id) }
 
         if let origin = minimizedOrigins.removeValue(forKey: window.id), origin.key == key,
-            origin.tile < workspace.tiles.count {
-            workspace.tiles[origin.tile].windows.insert(window.id, at: 0)
+            let tile = workspace.tiles.firstIndex(where: { $0.windows.contains(origin.mate) }) {
+            workspace.tiles[tile].windows.insert(window.id, at: 0)
             workspaces[key] = workspace
             return []
         }

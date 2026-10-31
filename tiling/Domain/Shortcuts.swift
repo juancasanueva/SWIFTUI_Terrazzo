@@ -17,7 +17,7 @@ struct KeyModifiers: OptionSet, Hashable, Codable, Sendable {
 enum ShortcutKey: String, CaseIterable, Hashable, Sendable {
     case a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z
     case n0 = "0", n1 = "1", n2 = "2", n3 = "3", n4 = "4", n5 = "5", n6 = "6", n7 = "7", n8 = "8", n9 = "9"
-    case left, right, up, down, `return`, tab, space
+    case left, right, up, down, `return`, tab, space, escape
     case grave = "`", minus = "-", equal = "=", leftBracket = "[", rightBracket = "]"
     case backslash = "\\", semicolon = ";", quote = "'", comma = ",", period = ".", slash = "/"
 
@@ -30,6 +30,7 @@ enum ShortcutKey: String, CaseIterable, Hashable, Sendable {
         case .return: "↩"
         case .tab: "⇥"
         case .space: "␣"
+        case .escape: "⎋"
         default: rawValue.uppercased()
         }
     }
@@ -50,7 +51,7 @@ enum ShortcutKey: String, CaseIterable, Hashable, Sendable {
         .n7: 26, .minus: 27, .n8: 28, .n0: 29, .rightBracket: 30, .o: 31, .u: 32, .leftBracket: 33, .i: 34,
         .p: 35, .return: 36, .l: 37, .j: 38, .quote: 39, .k: 40, .semicolon: 41, .backslash: 42, .comma: 43,
         .slash: 44, .n: 45, .m: 46, .period: 47, .tab: 48, .space: 49, .grave: 50, .left: 123, .right: 124,
-        .down: 125, .up: 126,
+        .down: 125, .up: 126, .escape: 53,
     ]
 }
 

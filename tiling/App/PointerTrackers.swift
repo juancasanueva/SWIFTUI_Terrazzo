@@ -15,7 +15,15 @@ final class DragTracker {
     }
 
     /// True from the press on a tiled window until release; automatic placement waits meanwhile.
-    var isActive: Bool { window != nil }
+    /// Global monitors miss a release over this app's own panels, so the button state has the last word.
+    var isActive: Bool {
+        guard window != nil else { return false }
+        if NSEvent.pressedMouseButtons & 1 == 0 {
+            released()
+            return false
+        }
+        return true
+    }
 
     func start() {
         guard monitors.isEmpty else { return }
@@ -38,7 +46,8 @@ final class DragTracker {
     }
 
     private func pressed() {
-        guard let id = controller.tiledWindow(at: Displays.pointerLocation()),
+        // Resize handles reach a few points outside the window.
+        guard let id = controller.tiledWindow(at: Displays.pointerLocation(), tolerance: 6),
             let frame = controller.ax.currentFrame(of: id)
         else { return }
         window = id

@@ -6,7 +6,38 @@ final class HotKeyCenter {
     private var references: [EventHotKeyRef] = []
     private var actions: [UInt32: ShortcutAction] = [:]
     private var handler: EventHandlerRef?
+    private var temporaryReferences: [EventHotKeyRef] = []
+    private var temporaryKeys: [UInt32: ShortcutKey] = [:]
+    private var onTemporaryPress: ((ShortcutKey) -> Void)?
     var onPress: ((ShortcutAction) -> Void)?
+
+    /// Claims keys only while something like Tab View is open, without taking keyboard focus from the
+    /// active app. Numbered apart from regular shortcuts.
+    func registerTemporary(
+        _ keys: [ShortcutKey], modifiers: KeyModifiers, onPress: @escaping (ShortcutKey) -> Void
+    ) {
+        unregisterTemporary()
+        installHandlerIfNeeded()
+        onTemporaryPress = onPress
+        for (index, key) in keys.enumerated() {
+            let id = UInt32(index + 1000)
+            var reference: EventHotKeyRef?
+            let status = RegisterEventHotKey(
+                key.keyCode, Self.carbonModifiers(modifiers), EventHotKeyID(signature: OSType(0x544C_4E47), id: id),
+                GetEventDispatcherTarget(), 0, &reference)
+            if status == noErr, let reference {
+                temporaryReferences.append(reference)
+                temporaryKeys[id] = key
+            }
+        }
+    }
+
+    func unregisterTemporary() {
+        temporaryReferences.forEach { UnregisterEventHotKey($0) }
+        temporaryReferences = []
+        temporaryKeys = [:]
+        onTemporaryPress = nil
+    }
 
     /// Returns the actions the system refused.
     @discardableResult
@@ -46,7 +77,11 @@ final class HotKeyCenter {
     }
 
     fileprivate func pressed(id: UInt32) {
-        if let action = actions[id] { onPress?(action) }
+        if let key = temporaryKeys[id] {
+            onTemporaryPress?(key)
+        } else if let action = actions[id] {
+            onPress?(action)
+        }
     }
 
     static func carbonModifiers(_ modifiers: KeyModifiers) -> UInt32 {

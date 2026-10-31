@@ -28,17 +28,12 @@ final class TabViewModel {
     var ordered: [TabEntry] { screens.flatMap { $0.entries + $0.minimized } }
 }
 
-final class KeyablePanel: NSPanel {
-    override var canBecomeKey: Bool { true }
-}
-
 /// Every window, screen by screen, while a modifier is held. Titles are read when it opens and
 /// dropped when it closes.
 final class TabViewController {
     private unowned let controller: AppController
     private let model = TabViewModel()
-    private var panel: KeyablePanel?
-    private var keyMonitor: Any?
+    private var panel: NSPanel?
     private var releaseTimer: Timer?
     private var heldModifiers: NSEvent.ModifierFlags = []
 
@@ -75,19 +70,20 @@ final class TabViewController {
             x: display.midX - size.width / 2, y: display.midY - size.height / 2, width: size.width,
             height: size.height)
         panel.setFrame(Displays.toAppKit(frame), display: true)
-        panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
 
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handle(event) == true ? nil : event
-        }
+        // The panel never takes keyboard focus, so the active app keeps it until the user switches.
+        controller.hotKeys.registerTemporary(
+            [.left, .right, .up, .down, .return, .escape],
+            modifiers: controller.shortcuts.combo(for: .tabView)?.modifiers ?? .option
+        ) { [weak self] key in self?.handle(key) }
         releaseTimer = Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.checkRelease() }
         }
     }
 
-    private func makePanel() -> KeyablePanel {
-        let panel = KeyablePanel(
+    private func makePanel() -> NSPanel {
+        let panel = NSPanel(
             contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -163,26 +159,23 @@ final class TabViewController {
         }
     }
 
-    private func handle(_ event: NSEvent) -> Bool {
-        switch event.keyCode {
-        case 53:
+    private func handle(_ key: ShortcutKey) {
+        switch key {
+        case .escape:
             close()
-        case 36:
+        case .return:
             if let selection = model.selection { commit(selection) }
-        case 48:
-            advance(backward: event.modifierFlags.contains(.shift))
-        case 123:
+        case .left:
             moveSelection(.left)
-        case 124:
+        case .right:
             moveSelection(.right)
-        case 125:
+        case .down:
             moveSelection(.down)
-        case 126:
+        case .up:
             moveSelection(.up)
         default:
-            return false
+            break
         }
-        return true
     }
 
     private func checkRelease() {
@@ -204,8 +197,7 @@ final class TabViewController {
     private func close() {
         releaseTimer?.invalidate()
         releaseTimer = nil
-        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
-        keyMonitor = nil
+        controller.hotKeys.unregisterTemporary()
         panel?.orderOut(nil)
         model.screens = []
         model.selection = nil

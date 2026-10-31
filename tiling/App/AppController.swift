@@ -83,6 +83,8 @@ final class AppController {
     var revision = 0
 
     @ObservationIgnored private var pendingPids: Set<pid_t> = []
+    @ObservationIgnored private var followUps: Set<pid_t> = []
+    @ObservationIgnored private var suspectedMinimums: [WindowID: CGSize] = [:]
     @ObservationIgnored private var pendingAll = false
     @ObservationIgnored private var refreshScheduled = false
     @ObservationIgnored private var lastShowing: Set<WindowID> = []
@@ -115,7 +117,7 @@ final class AppController {
         reloadConfig()
         watcher.onChange = { [weak self] in self?.reloadConfig() }
         watcher.start(directory: directory)
-        ax.onChange = { [weak self] pid in self?.scheduleRefresh(pid: pid) }
+        ax.onChange = { [weak self] pid in self?.windowsChanged(pid: pid) }
         hotKeys.onPress = { [weak self] action in self?.perform(action) }
 
         let workspace = NSWorkspace.shared.notificationCenter
@@ -320,6 +322,16 @@ final class AppController {
         }
     }
 
+    /// A closing window can still be listed when its notification arrives, so look again shortly after.
+    private func windowsChanged(pid: pid_t) {
+        scheduleRefresh(pid: pid)
+        guard followUps.insert(pid).inserted else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.followUps.remove(pid)
+            self?.scheduleRefresh(pid: pid)
+        }
+    }
+
     private func refreshNow() {
         guard isOperating, !dragTracker.isActive else { return }
         let all = pendingAll
@@ -439,13 +451,33 @@ final class AppController {
     }
 
     /// Records a size the app refused to go below. Small differences are grid rounding, as in terminals.
+    /// A single refusal proves nothing: the app may be animating or mid-drag. It must refuse the same
+    /// way again shortly after before the size is remembered.
     private func learnMinimum(id: WindowID, requested: CGRect, accepted: CGRect) -> Bool {
         guard let app = state.apps[id] else { return false }
         let tolerance: CGFloat = 24
+        let refusedWidth = accepted.width > requested.width + tolerance
+        let refusedHeight = accepted.height > requested.height + tolerance
+        guard refusedWidth || refusedHeight else {
+            suspectedMinimums[id] = nil
+            return false
+        }
+        guard NSEvent.pressedMouseButtons == 0 else { return false }
+        if let suspected = suspectedMinimums[id], abs(suspected.width - accepted.width) < 2,
+            abs(suspected.height - accepted.height) < 2 {
+            suspectedMinimums[id] = nil
+        } else {
+            suspectedMinimums[id] = accepted.size
+            lastApplied[id] = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.scheduleRefresh(pid: nil)
+            }
+            return false
+        }
         let current = rules.learnedMinimums[app] ?? .zero
         var updated = current
-        if accepted.width > requested.width + tolerance { updated.width = max(current.width, accepted.width) }
-        if accepted.height > requested.height + tolerance { updated.height = max(current.height, accepted.height) }
+        if refusedWidth { updated.width = max(current.width, accepted.width) }
+        if refusedHeight { updated.height = max(current.height, accepted.height) }
         guard updated != current else { return false }
         rules.learnedMinimums[app] = updated
         return true
@@ -539,7 +571,10 @@ final class AppController {
             if let next = state.adjacentWindow(to: id, forward: action == .nextWindow) { ax.focus(next) }
             return
         case .nextInTile, .previousInTile:
-            if let next = state.cycleStack(of: id, forward: action == .nextInTile) { ax.focus(next) }
+            if let next = state.cycleStack(of: id, forward: action == .nextInTile) {
+                ax.focus(next)
+                state.focused = next
+            }
         case .bigger, .smaller:
             show(state.step(id, grow: action == .bigger, context: context))
             if let key = state.key(of: id) { saveScreenPreferences(key) }
@@ -637,13 +672,14 @@ final class AppController {
     }
 
     /// The tiled window on top at a point, using window bounds only.
-    func tiledWindow(at point: CGPoint) -> WindowID? {
+    func tiledWindow(at point: CGPoint, tolerance: CGFloat = 0) -> WindowID? {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]]
         else { return nil }
         for entry in list {
             guard let bounds = entry[kCGWindowBounds as String] as? NSDictionary,
-                let rect = CGRect(dictionaryRepresentation: bounds), rect.contains(point),
+                let rect = CGRect(dictionaryRepresentation: bounds),
+                rect.insetBy(dx: -tolerance, dy: -tolerance).contains(point),
                 let number = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
                 (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value != getpid()
             else { continue }
@@ -758,6 +794,8 @@ final class AppController {
     func showWindow(_ id: WindowID) {
         state.show(id)
         ax.focus(id)
+        // Otherwise applying the plan re-raises the previous window and undoes the switch.
+        state.focused = id
         apply()
     }
 

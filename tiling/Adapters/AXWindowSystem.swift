@@ -189,6 +189,7 @@ final class AXWindowSystem {
         let app = AXUIElementCreateApplication(record.pid)
         AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
         AXUIElementSetAttributeValue(record.element, kAXMainAttribute as CFString, kCFBooleanTrue)
+        AXUIElementSetAttributeValue(app, kAXFocusedWindowAttribute as CFString, record.element)
         AXUIElementPerformAction(record.element, kAXRaiseAction as CFString)
     }
 
