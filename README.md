@@ -2,7 +2,7 @@
 
 A tiling window manager for macOS. Windows take a place when they open, the rest fill the space when one closes, and extra windows stack in the tile you're using. There's a menu-bar panel and a Settings window, and everything is also a plain file in `~/.config/tiling/`.
 
-Its behavior is modelled on [the reference app], with numbered workspaces and a command line inspired by [AeroSpace](https://github.com/nikitabobko/AeroSpace). It is an independent project, not affiliated with either.
+Its numbered workspaces and command line are inspired by [AeroSpace](https://github.com/nikitabobko/AeroSpace), but it is an independent project, not affiliated with it.
 
 ## Requirements
 
