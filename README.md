@@ -1,4 +1,4 @@
-# <img src="Terrazzo/Assets.xcassets/AppIcon.appiconset/icon_128.png" alt="" width="48" height="48" align="center"> Terrazzo
+# <img src="Terrazzo/Assets.xcassets/AppIcon.appiconset/icon_256.png" alt="" width="96" height="96" align="center"> Terrazzo
 
 A tiling window manager for macOS. Windows take a place when they open, the rest fill the space when one closes, and extra windows stack in the tile you're using. There's a menu-bar panel and a Settings window, and everything is also a plain file in `~/.config/terrazzo/`.
 
