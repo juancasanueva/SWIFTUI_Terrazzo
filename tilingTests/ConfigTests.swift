@@ -156,12 +156,23 @@ struct ConfigTests {
         #expect(map.combo(for: .previousInTile)?.symbols == "⌃⇧N")
     }
 
+    @Test func floatingUsesControlTWhateverThePrefix() {
+        var map = ShortcutMap()
+        #expect(map.combo(for: .float)?.symbols == "⌃T")
+        map.prefix = .optionCommand
+        #expect(map.combo(for: .float)?.symbols == "⌃T")
+    }
+
+    @Test func alwaysFloatKeepsItsOwnKeys() {
+        #expect(ShortcutMap().combo(for: .alwaysFloat)?.symbols == "⌃⌥⇧F")
+    }
+
     @Test func focusModeUsesControlFWhateverThePrefix() {
         var map = ShortcutMap()
         #expect(map.combo(for: .focus)?.symbols == "⌃F")
         map.prefix = .optionCommand
         #expect(map.combo(for: .focus)?.symbols == "⌃F")
-        #expect(map.combo(for: .float)?.symbols == "⌥⌘F")
+        #expect(map.combo(for: .alwaysFloat)?.symbols == "⌥⇧⌘F")
     }
 
     @Test func directionalFocusDefaultsToControlArrowsWhateverThePrefix() {
@@ -228,7 +239,7 @@ struct ConfigTests {
 
     @Test func conflictsListOwnAndSystemShortcuts() throws {
         let map = ShortcutMap()
-        let own = try #require(KeyCombo(string: "ctrl+opt+f"))
+        let own = try #require(KeyCombo(string: "ctrl+t"))
         #expect(map.conflicts(for: own, action: .retile, system: []) == [.shortcut(.float)])
         #expect(map.conflicts(for: own, action: .float, system: []).isEmpty)
         let system = try #require(KeyCombo(string: "cmd+space"))

@@ -251,6 +251,9 @@ struct ShortcutMap: Codable, Equatable, Sendable {
         if action == .focus {
             return KeyCombo(key: .f, modifiers: .control)
         }
+        if action == .float {
+            return KeyCombo(key: .t, modifiers: .control)
+        }
         if action == .nextInTile {
             return KeyCombo(key: .n, modifiers: .control)
         }
