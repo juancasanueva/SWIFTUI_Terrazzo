@@ -253,14 +253,14 @@ struct VirtualWorkspacesTests {
 
     // MARK: Shortcuts
 
-    @Test func workspaceShortcutsDefaultToOptionAndDigits() {
+    @Test func workspaceShortcutsDefaultToControlAndDigits() {
         var map = ShortcutMap()
-        #expect(map.combo(for: .workspace1)?.symbols == "⌥1")
-        #expect(map.combo(for: .workspace9)?.symbols == "⌥9")
-        #expect(map.combo(for: .moveToWorkspace1)?.symbols == "⌥⇧1")
-        #expect(map.combo(for: .moveToWorkspace9)?.symbols == "⌥⇧9")
+        #expect(map.combo(for: .workspace1)?.symbols == "⌃1")
+        #expect(map.combo(for: .workspace9)?.symbols == "⌃9")
+        #expect(map.combo(for: .moveToWorkspace1)?.symbols == "⌃⇧1")
+        #expect(map.combo(for: .moveToWorkspace9)?.symbols == "⌃⇧9")
         map.prefix = .controlShift
-        #expect(map.combo(for: .workspace3)?.symbols == "⌥3")
+        #expect(map.combo(for: .workspace3)?.symbols == "⌃3")
     }
 
     @Test func workspaceActionsKnowTheirNumbers() {

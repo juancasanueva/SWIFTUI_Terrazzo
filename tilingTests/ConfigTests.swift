@@ -81,10 +81,10 @@ struct ConfigTests {
 
     @Test func defaultsMatchTheDocumentedTable() {
         let map = ShortcutMap()
-        #expect(map.combo(for: .swapLeft)?.symbols == "⌥⇧←")
-        #expect(map.combo(for: .swapRight)?.symbols == "⌥⇧→")
-        #expect(map.combo(for: .swapUp)?.symbols == "⌥⇧↑")
-        #expect(map.combo(for: .swapDown)?.symbols == "⌥⇧↓")
+        #expect(map.combo(for: .swapLeft)?.symbols == "⌃⇧←")
+        #expect(map.combo(for: .swapRight)?.symbols == "⌃⇧→")
+        #expect(map.combo(for: .swapUp)?.symbols == "⌃⇧↑")
+        #expect(map.combo(for: .swapDown)?.symbols == "⌃⇧↓")
         #expect(map.combo(for: .makePrimary)?.symbols == "⌃⌥↩")
         #expect(map.combo(for: .nextInTile)?.symbols == "⌃⌥`")
         #expect(map.combo(for: .previousInTile)?.symbols == "⌃⌥⇧`")
@@ -95,14 +95,14 @@ struct ConfigTests {
         #expect(map.combo(for: .tile5)?.symbols == "⌃⌥⌘5")
     }
 
-    @Test func directionalFocusDefaultsToOptionArrowsWhateverThePrefix() {
+    @Test func directionalFocusDefaultsToControlArrowsWhateverThePrefix() {
         var map = ShortcutMap()
-        #expect(map.combo(for: .focusLeft)?.symbols == "⌥←")
-        #expect(map.combo(for: .focusRight)?.symbols == "⌥→")
-        #expect(map.combo(for: .focusUp)?.symbols == "⌥↑")
-        #expect(map.combo(for: .focusDown)?.symbols == "⌥↓")
+        #expect(map.combo(for: .focusLeft)?.symbols == "⌃←")
+        #expect(map.combo(for: .focusRight)?.symbols == "⌃→")
+        #expect(map.combo(for: .focusUp)?.symbols == "⌃↑")
+        #expect(map.combo(for: .focusDown)?.symbols == "⌃↓")
         map.prefix = .controlShift
-        #expect(map.combo(for: .focusLeft)?.symbols == "⌥←")
+        #expect(map.combo(for: .focusLeft)?.symbols == "⌃←")
     }
 
     @Test func directionalFocusCanBeRebound() {
@@ -118,7 +118,7 @@ struct ConfigTests {
         map.bindings[ShortcutAction.focus.rawValue] = "ctrl+shift+y"
         map.prefix = .optionCommand
         #expect(map.combo(for: .retile)?.symbols == "⌥⌘R")
-        #expect(map.combo(for: .swapLeft)?.symbols == "⌥⇧←")
+        #expect(map.combo(for: .swapLeft)?.symbols == "⌃⇧←")
         #expect(map.combo(for: .focus)?.symbols == "⌃⇧Y")
         #expect(map.combo(for: .tabView)?.symbols == "⌥⇥")
     }

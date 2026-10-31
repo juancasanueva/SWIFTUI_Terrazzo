@@ -208,22 +208,25 @@ struct ShortcutMap: Codable, Equatable, Sendable {
             return binding == Self.off ? nil : KeyCombo(string: binding)
         }
         if let number = action.workspaceNumber, let key = ShortcutKey(rawValue: "\(number)") {
-            return KeyCombo(key: key, modifiers: .option)
+            return KeyCombo(key: key, modifiers: .control)
         }
         if let number = action.moveWorkspaceNumber, let key = ShortcutKey(rawValue: "\(number)") {
-            return KeyCombo(key: key, modifiers: [.option, .shift])
+            return KeyCombo(key: key, modifiers: [.control, .shift])
         }
         let suffix = action.defaultSuffix
         // Moving goes with directional focus: same arrows and modifier, plus Shift, whatever the prefix.
         if action.isSwap {
-            return KeyCombo(key: suffix.key, modifiers: [.option, .shift])
+            return KeyCombo(key: suffix.key, modifiers: [.control, .shift])
         }
         if action == .tabViewBackward {
             return combo(for: .tabView).map { KeyCombo(key: $0.key, modifiers: $0.modifiers.union(.shift)) }
         }
-        // Like Tab View, these stay on Option when the prefix changes.
-        if action == .tabView || action.focusDirection != nil {
+        // These don't follow the prefix either.
+        if action == .tabView {
             return KeyCombo(key: suffix.key, modifiers: .option)
+        }
+        if action.focusDirection != nil {
+            return KeyCombo(key: suffix.key, modifiers: .control)
         }
         if action.tileCount != nil, let tileModifiers,
             let shared = KeyCombo(string: "\(tileModifiers)+\(suffix.key.rawValue)") {

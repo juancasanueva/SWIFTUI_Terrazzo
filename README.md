@@ -29,10 +29,10 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 
 | Keys | Action |
 | --- | --- |
-| ⌥ ←→↑↓ | Focus the window in that direction, or the next screen. Takes over word navigation in text fields; rebind it if you need that |
-| ⌥⇧ ←→↑↓ | Swap with the neighbor, or move to the next screen. Takes over selecting by word in text fields |
-| ⌥ 1–9 | Switch to that workspace |
-| ⌥⇧ 1–9 | Move the active window to that workspace |
+| ⌃ ←→↑↓ | Focus the window in that direction, or the next screen. macOS uses these keys for Mission Control and Spaces by default; turn those off in System Settings → Keyboard → Keyboard Shortcuts → Mission Control |
+| ⌃⇧ ←→↑↓ | Swap with the neighbor, or move to the next screen |
+| ⌃ 1–9 | Switch to that workspace |
+| ⌃⇧ 1–9 | Move the active window to that workspace |
 | ⌃⌥↩ | Make the active window primary |
 | ⌃⌥] ⌃⌥[ | Activate next / previous window |
 | ⌃⌥\` ⌃⌥⇧\` | Next / previous window in this tile |
@@ -56,8 +56,6 @@ To keep workspaces on particular monitors, map numbers to part of a monitor's na
 ```json
 { "workspaceDisplays": { "1": "LG", "2": "LG", "7": "Odyssey", "8": "Odyssey" } }
 ```
-
-On layouts where ⌥ + number types a character (⌥2 is `@` on Spanish keyboards), those characters can't be typed while the app runs. Rebind `workspace1`…`workspace9` and `moveToWorkspace1`…`moveToWorkspace9` in `shortcuts.json` if you need them.
 
 ## Layout of the code
 
