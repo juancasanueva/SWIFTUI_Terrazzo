@@ -12,6 +12,7 @@ Everything lives in plain JSON in `~/.config/tiling/` (or `$XDG_CONFIG_HOME/tili
 | `shortcuts.json` | Prefix, master switch, and the shortcuts you changed |
 | `apps.json` | Apps that are never tiled, and the minimum sizes learned per app |
 | `screens.json` | Layout, window count and dragged sizes per screen and Space |
+| `layout.json` | Where windows are, written by the app so a restart can put them back. Window numbers and app identifiers only, never titles |
 
 The app writes these when you change something in its interface, and reloads them within a moment when you edit them by hand. Keys you leave out take their default. If a file can't be parsed, the app keeps its last good values, tells you which file has the error, and refuses to overwrite it until you fix it.
 
@@ -55,7 +56,11 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 
 ## Workspaces
 
-There are nine numbered workspaces, separate from macOS Spaces, working like AeroSpace's: each display shows one, and a workspace not showing keeps its windows parked in a corner of the screen. Pressing a number goes to that workspace wherever it is. Floating and excluded apps' windows stay visible on every workspace. Parked windows come back when the app quits or tiling is paused; after a crash they are tiled again on the next launch, on one workspace.
+There are nine numbered workspaces, separate from macOS Spaces, working like AeroSpace's: each display shows one, and a workspace not showing keeps its windows parked in a corner of the screen. Pressing a number goes to that workspace wherever it is. Floating and excluded apps' windows stay visible on every workspace. Parked windows come back when the app quits or tiling is paused, and return to their workspace on the next launch.
+
+## Restarts
+
+Restarting the app puts windows back: tiles, stacks, floats, and each window's workspace. macOS gives a window a new number when it is reopened, so windows are not remembered across quitting their app or restarting the Mac. Focus mode and Clean Space end with the app.
 
 To keep workspaces on particular monitors, map numbers to part of a monitor's name in `settings.json`, or use Settings → Layout → Workspace displays. A workspace always shows on its monitor while that monitor is connected, and otherwise comes to the focused one.
 

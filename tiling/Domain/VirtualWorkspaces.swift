@@ -31,6 +31,20 @@ struct VirtualWorkspaces: Equatable {
         pinnedDisplay(of: number) ?? homes[number].flatMap { connected.contains($0) ? $0 : nil }
     }
 
+    var savedVisible: [String: Int] { visible.merging(remembered) { current, _ in current } }
+
+    var savedHomes: [String: String] {
+        Dictionary(uniqueKeysWithValues: homes.map { (String($0.key), $0.value) })
+    }
+
+    /// Brings back what was saved. The next `sync` shows each display's workspace again.
+    mutating func restore(visible: [String: Int], homes: [String: String]) {
+        remembered = visible
+        for (text, display) in homes {
+            if let number = Int(text), Self.numbers.contains(number) { self.homes[number] = display }
+        }
+    }
+
     mutating func adopt(_ number: Int, on display: String) {
         homes[number] = display
     }

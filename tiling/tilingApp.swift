@@ -3,6 +3,7 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
+        AppController.shared.saveLayoutNow()
         AppController.shared.revealHiddenWindows()
     }
 

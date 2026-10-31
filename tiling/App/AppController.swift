@@ -29,6 +29,10 @@ final class AppController {
         url: directory.appendingPathComponent("apps.json"), defaults: AppRules())
     @ObservationIgnored private lazy var screensFile = ConfigFile(
         url: directory.appendingPathComponent("screens.json"), defaults: ScreensFile())
+    @ObservationIgnored private lazy var layoutFile = ConfigFile(
+        url: directory.appendingPathComponent("layout.json"), defaults: SavedLayout())
+    @ObservationIgnored private var lastSavedLayout: SavedLayout?
+    @ObservationIgnored private var layoutSaveScheduled = false
     @ObservationIgnored private let watcher = ConfigWatcher()
     @ObservationIgnored private var isLoadingConfig = false
 
@@ -166,6 +170,7 @@ final class AppController {
         source.resume()
         terminationSource = source
 
+        restoreLayout()
         syncWorkspaces()
         applyAppearance()
         pollSystemState()
@@ -260,6 +265,48 @@ final class AppController {
             overlays.showNotice(
                 String(localized: "\(file.url.lastPathComponent) has an error. Fix it to save this change."))
         }
+    }
+
+    /// Must run before the first scan, so windows aren't taken for new ones.
+    private func restoreLayout() {
+        guard let saved = try? layoutFile.load(), !saved.entries.isEmpty else { return }
+        lastSavedLayout = saved
+        workspaceMap.restore(visible: saved.visible, homes: saved.homes)
+        saved.entries.forEach { hydrate($0.key) }
+        state.restore(saved, owners: Self.windowOwners())
+    }
+
+    /// Every window that exists, on any Space, with its app, named the way scans name it.
+    private static func windowOwners() -> [WindowID: String] {
+        guard let list = CGWindowListCopyWindowInfo(.optionAll, kCGNullWindowID) as? [[String: Any]] else {
+            return [:]
+        }
+        var owners: [WindowID: String] = [:]
+        for entry in list {
+            guard let id = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
+                let pid = (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value
+            else { continue }
+            owners[id] = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "pid.\(pid)"
+        }
+        return owners
+    }
+
+    private func scheduleLayoutSave() {
+        guard !layoutSaveScheduled else { return }
+        layoutSaveScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.layoutSaveScheduled = false
+            self?.saveLayoutNow()
+        }
+    }
+
+    func saveLayoutNow() {
+        let saved = state.savedLayout(map: workspaceMap)
+        guard saved != lastSavedLayout else { return }
+        // This file belongs to the app, so a damaged one is simply replaced.
+        if (try? layoutFile.load()) == nil { try? FileManager.default.removeItem(at: layoutFile.url) }
+        guard (try? layoutFile.save(saved)) != nil else { return }
+        lastSavedLayout = saved
     }
 
     private func saveScreenPreferences(_ key: WorkspaceKey) {
@@ -667,6 +714,7 @@ final class AppController {
         }
         updateOverlays(context: context)
         revision &+= 1
+        scheduleLayoutSave()
         return moved
     }
 
