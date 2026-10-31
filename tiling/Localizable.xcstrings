@@ -785,6 +785,34 @@
         }
       }
     },
+    "Bar color": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color de las barras"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バーのカラー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "막대 색상"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "条的颜色"
+          }
+        }
+      }
+    },
     "Blur other windows": {
       "localizations": {
         "es": {
@@ -3389,6 +3417,34 @@
         }
       }
     },
+    "Stacked windows": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ventanas apiladas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタックされたウインドウ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쌓인 윈도우"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "堆叠的窗口"
+          }
+        }
+      }
+    },
     "Stone": {
       "localizations": {
         "es": {
@@ -4253,6 +4309,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用 Tiling"
+          }
+        }
+      }
+    },
+    "Wait before showing the icons": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espera antes de mostrar los iconos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンを表示するまでの待ち時間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘 표시 전 대기 시간"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示图标前的等待时间"
           }
         }
       }

@@ -19,6 +19,12 @@ The app writes these when you change something in its interface, and reloads the
 { "gap": 12, "layout": "side", "mainSize": "twoThirds", "windowsPerScreen": 4 }
 ```
 
+The bars above stacked windows have their own settings: `color` as hex, and `hoverDelay`, the seconds the pointer rests on a bar before the panel with the window icons opens, from 0 to 10. Both are also in Settings → Highlight.
+
+```json
+{ "stackBar": { "color": "#3B82F6", "hoverDelay": 2.5 } }
+```
+
 Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` disables one. Action names are the case names of `ShortcutAction` in `tiling/Domain/Shortcuts.swift`.
 
 ```json

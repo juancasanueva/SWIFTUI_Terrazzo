@@ -37,6 +37,19 @@ struct AppSettings: Codable, Equatable, Sendable {
         var width: Double = 3
     }
 
+    /// The bars above stacked windows.
+    struct StackBar: Codable, Equatable, Sendable {
+        static let maximumDelay: Double = 10
+
+        var color = "#FF9500"
+        /// Seconds the pointer rests on a bar before the panel with the window icons opens.
+        var hoverDelay: Double = 1.2
+
+        var resolvedDelay: Duration {
+            .milliseconds(Int(min(max(hoverDelay, 0), Self.maximumDelay) * 1000))
+        }
+    }
+
     var tilingEnabled = true
     var setupFinished = false
     var stackNoticeShown = false
@@ -53,6 +66,7 @@ struct AppSettings: Codable, Equatable, Sendable {
     var screenEdgesByDisplay: [String: ScreenEdges] = [:]
     var highlight = Highlight()
     var noPeek = NoPeek()
+    var stackBar = StackBar()
     var hoverFocus = false
     /// Workspace number to part of a display name, such as `"7": "Odyssey"`. The workspace always
     /// shows on that display while it is connected.

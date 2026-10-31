@@ -6,6 +6,7 @@ final class GripModel {
     var windows: [WindowID] = []
     var isActive = false
     var expanded = false
+    var style = AppSettings.StackBar()
     var onExpansionChange: ((Bool) -> Void)?
 }
 
@@ -18,8 +19,6 @@ enum GripMetrics {
     static let dotSize: CGFloat = 12
     static let dotTarget: CGFloat = 24
     static let spacing: CGFloat = 4
-    /// How long the pointer must rest on the bar before the actions bar opens.
-    static let expandDelay: Duration = .milliseconds(1200)
     static let chipIconSize: CGFloat = 36
     static let expandedSize = CGSize(width: 440, height: 104)
     private static let sidePadding: CGFloat = 8
@@ -80,7 +79,10 @@ final class GripPanel: NSPanel {
         model.onExpansionChange = { [weak self] _ in self?.reposition() }
     }
 
-    func show(windows: [WindowID], isActive: Bool, above frame: CGRect, gap: CGFloat) {
+    func show(
+        windows: [WindowID], isActive: Bool, above frame: CGRect, gap: CGFloat, style: AppSettings.StackBar
+    ) {
+        model.style = style
         model.windows = windows
         model.isActive = isActive
         // Only the active tile has the bar of actions.
@@ -113,7 +115,7 @@ private struct GripView: View {
     var body: some View {
         Group {
             if model.expanded {
-                HoverBar(windows: model.windows, controller: controller)
+                HoverBar(windows: model.windows, color: barColor, controller: controller)
             } else {
                 segments
             }
@@ -121,6 +123,8 @@ private struct GripView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onHover(perform: hoverChanged)
     }
+
+    private var barColor: Color { Color(nsColor: model.style.resolvedColor) }
 
     private var segments: some View {
         HStack(spacing: GripMetrics.spacing) {
@@ -130,7 +134,7 @@ private struct GripView: View {
                 } label: {
                     if model.isActive {
                         Capsule()
-                            .fill(Color.orange.opacity(segment.isShowing ? 1 : 0.6))
+                            .fill(barColor.opacity(segment.isShowing ? 1 : 0.6))
                             .frame(
                                 width: segment.width,
                                 height: GripMetrics.barHeight
@@ -139,7 +143,7 @@ private struct GripView: View {
                             .contentShape(Rectangle())
                     } else {
                         Circle()
-                            .fill(Color.orange.opacity(segment.isShowing ? 1 : 0.55))
+                            .fill(barColor.opacity(segment.isShowing ? 1 : 0.55))
                             .frame(width: GripMetrics.dotSize, height: GripMetrics.dotSize)
                             .frame(width: GripMetrics.dotTarget, height: GripMetrics.hitHeight)
                             .contentShape(Rectangle())
@@ -156,7 +160,7 @@ private struct GripView: View {
     private func hoverChanged(_ hovering: Bool) {
         pendingExpansion?.cancel()
         pendingExpansion = Task {
-            try? await Task.sleep(for: hovering ? GripMetrics.expandDelay : .milliseconds(400))
+            try? await Task.sleep(for: hovering ? model.style.resolvedDelay : .milliseconds(400))
             // Replacing the segments mid-click would lose the click.
             guard !Task.isCancelled, model.isActive || !hovering, NSEvent.pressedMouseButtons == 0 else { return }
             if model.expanded != hovering {
@@ -169,6 +173,7 @@ private struct GripView: View {
 
 private struct HoverBar: View {
     let windows: [WindowID]
+    let color: Color
     let controller: AppController
 
     private var active: WindowID? { windows.first }
@@ -188,7 +193,7 @@ private struct HoverBar: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
                         ForEach(Tile(windows: windows).barOrder, id: \.self) { id in
-                            WindowChip(id: id, isShowing: id == active, controller: controller)
+                            WindowChip(id: id, isShowing: id == active, color: color, controller: controller)
                         }
                     }
                 }
@@ -237,6 +242,7 @@ private struct HoverBar: View {
 private struct WindowChip: View {
     let id: WindowID
     let isShowing: Bool
+    let color: Color
     let controller: AppController
     @State private var isHovering = false
 
@@ -260,7 +266,7 @@ private struct WindowChip: View {
         }
         .padding(4)
         .background(
-            isShowing ? Color.orange.opacity(0.35) : Color.primary.opacity(0.08),
+            isShowing ? color.opacity(0.35) : Color.primary.opacity(0.08),
             in: RoundedRectangle(cornerRadius: 6)
         )
         .overlay(MiddleClickCatcher { controller.closeWindow(id) })

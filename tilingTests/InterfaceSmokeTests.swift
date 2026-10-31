@@ -1,4 +1,5 @@
 import AppKit
+import Foundation
 import SwiftUI
 import Testing
 @testable import tiling
@@ -72,7 +73,6 @@ struct GripMetricsTests {
     }
 
     @Test func theActionsBarWaitsAndItsIconsAreLarge() {
-        #expect(GripMetrics.expandDelay >= .milliseconds(1000))
         #expect(GripMetrics.chipIconSize >= 36)
         #expect(GripMetrics.expandedSize.height >= GripMetrics.chipIconSize + 56)
     }
@@ -91,5 +91,36 @@ struct GripMetricsTests {
     @Test func theMostRecentlyUsedOrderDoesNotMoveSegments() {
         #expect(GripMetrics.segments(of: [3, 5, 4]).map(\.id) == [5, 4, 3])
         #expect(GripMetrics.segments(of: [4, 3, 5]).map(\.id) == [5, 4, 3])
+    }
+
+    @Test func stackBarDefaultsToOrangeAndAShortWait() {
+        let bar = AppSettings().stackBar
+        #expect(bar.color == "#FF9500")
+        #expect(bar.hoverDelay == 1.2)
+        #expect(bar.resolvedDelay == .milliseconds(1200))
+    }
+
+    @Test func aHandEditedDelayIsKeptInARange() {
+        var bar = AppSettings.StackBar()
+        bar.hoverDelay = -3
+        #expect(bar.resolvedDelay == .zero)
+        bar.hoverDelay = 500
+        #expect(bar.resolvedDelay == .seconds(AppSettings.StackBar.maximumDelay))
+    }
+
+    @Test func aHandEditedColorFallsBackWhenInvalid() {
+        var bar = AppSettings.StackBar()
+        bar.color = "#00FF00"
+        #expect(bar.resolvedColor.hexString == "#00FF00")
+        bar.color = "green"
+        #expect(bar.resolvedColor.hexString == "#FF9500")
+    }
+
+    @Test func stackBarSettingsLoadFromAPartialFile() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        try Data(#"{"stackBar": {"hoverDelay": 3}}"#.utf8).write(to: url)
+        let settings = try ConfigFile(url: url, defaults: AppSettings()).load()
+        #expect(settings.stackBar.hoverDelay == 3)
+        #expect(settings.stackBar.color == "#FF9500")
     }
 }

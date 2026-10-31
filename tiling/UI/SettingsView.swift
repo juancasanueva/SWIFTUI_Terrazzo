@@ -202,6 +202,23 @@ private struct HighlightSettings: View {
                 }
                 Toggle("Hover focus", isOn: $controller.settings.hoverFocus)
             }
+            Section("Stacked windows") {
+                ColorPicker(
+                    "Bar color",
+                    selection: Binding(
+                        get: { Color(nsColor: controller.settings.stackBar.resolvedColor) },
+                        set: { controller.settings.stackBar.color = NSColor($0).hexString }),
+                    supportsOpacity: false)
+                LabeledContent("Wait before showing the icons") {
+                    HStack {
+                        Slider(
+                            value: $controller.settings.stackBar.hoverDelay,
+                            in: 0...AppSettings.StackBar.maximumDelay, step: 0.1)
+                        Text(verbatim: String(format: "%.1f s", controller.settings.stackBar.hoverDelay))
+                            .monospacedDigit()
+                    }
+                }
+            }
             Section {
                 Toggle(
                     "No peek mode",

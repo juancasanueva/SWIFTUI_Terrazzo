@@ -27,6 +27,13 @@ extension NSColor {
     }
 }
 
+extension AppSettings.StackBar {
+    /// A color typed by hand into the config may not parse.
+    var resolvedColor: NSColor {
+        NSColor(hex: color) ?? NSColor(hex: Self().color) ?? .systemOrange
+    }
+}
+
 extension CleanBackground {
     var color: NSColor {
         switch self {
@@ -180,7 +187,9 @@ final class OverlayCenter {
                 seen.insert(shown)
                 let panel = grips[shown] ?? GripPanel(controller: controller)
                 grips[shown] = panel
-                panel.show(windows: tile.windows, isActive: isActive, above: frame, gap: model.context.policy.gap)
+                panel.show(
+                    windows: tile.windows, isActive: isActive, above: frame, gap: model.context.policy.gap,
+                    style: model.settings.stackBar)
             }
         }
         for (id, panel) in grips where !seen.contains(id) {
