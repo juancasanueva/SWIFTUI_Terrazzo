@@ -38,6 +38,12 @@ enum Displays {
         return CGPoint(x: point.x, y: (NSScreen.screens.first?.frame.height ?? 0) - point.y)
     }
 
+    static func movePointer(to point: CGPoint) {
+        CGWarpMouseCursorPosition(point)
+        // A warp otherwise stops the pointer responding for a moment.
+        CGAssociateMouseAndMouseCursorPosition(1)
+    }
+
     static func display(containing point: CGPoint, in displays: [DisplayInfo]) -> DisplayInfo? {
         displays.first { $0.frame.contains(point) } ?? displays.first
     }

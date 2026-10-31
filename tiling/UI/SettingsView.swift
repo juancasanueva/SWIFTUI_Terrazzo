@@ -213,6 +213,8 @@ private struct HighlightSettings: View {
                     }
                 }
                 Toggle("Hover focus", isOn: $controller.settings.hoverFocus)
+                Toggle("Move the pointer to the focused window", isOn: $controller.settings.movePointer.onWindowFocus)
+                Toggle("Move the pointer to the focused monitor", isOn: $controller.settings.movePointer.onMonitorChange)
             }
             Section("Stacked windows") {
                 ColorPicker(

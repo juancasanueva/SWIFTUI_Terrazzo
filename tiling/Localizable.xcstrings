@@ -2577,6 +2577,62 @@
         }
       }
     },
+    "Move the pointer to the focused monitor": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mover el puntero a la pantalla enfocada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォーカスされたディスプレイにポインタを移動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포커스된 디스플레이로 포인터 이동"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将指针移到聚焦的显示器"
+          }
+        }
+      }
+    },
+    "Move the pointer to the focused window": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mover el puntero a la ventana enfocada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォーカスされたウインドウにポインタを移動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포커스된 윈도우로 포인터 이동"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将指针移到聚焦的窗口"
+          }
+        }
+      }
+    },
     "Move to": {
       "localizations": {
         "es": {

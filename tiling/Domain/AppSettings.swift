@@ -56,6 +56,14 @@ struct AppSettings: Codable, Equatable, Sendable {
         }
     }
 
+    /// Moving the pointer along with focus, so it is where you are working.
+    struct MovePointer: Codable, Equatable, Sendable {
+        /// To the center of the focused window, when not already over it.
+        var onWindowFocus = true
+        /// To the center of the monitor, when focus lands on another one.
+        var onMonitorChange = true
+    }
+
     var tilingEnabled = true
     var setupFinished = false
     var stackNoticeShown = false
@@ -74,6 +82,7 @@ struct AppSettings: Codable, Equatable, Sendable {
     var screenEdgesByDisplay: [String: ScreenEdges] = [:]
     var highlight = Highlight()
     var noPeek = NoPeek()
+    var movePointer = MovePointer()
     var stackBar = StackBar()
     /// A program and its arguments to run when workspaces change, for bars such as SketchyBar.
     /// `{workspace}` becomes the focused workspace number. Runs directly, without a shell.

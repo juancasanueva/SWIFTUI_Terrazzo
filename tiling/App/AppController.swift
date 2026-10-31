@@ -94,6 +94,7 @@ final class AppController {
     @ObservationIgnored private var hiddenWindows: Set<WindowID> = []
     @ObservationIgnored private var lastWorkspaceSwitch = Date.distantPast
     @ObservationIgnored private var emptyFocus = EmptyWorkspaceFocus()
+    @ObservationIgnored private var pointerFollowed: (window: WindowID, display: String)?
     @ObservationIgnored private var pendingShownFocus: String?
     @ObservationIgnored private var terminationSource: DispatchSourceSignal?
     @ObservationIgnored private var pendingPids: Set<pid_t> = []
@@ -508,6 +509,7 @@ final class AppController {
         emptyFocus.focusObserved(
             window: focused, isShown: focused.flatMap { state.key(of: $0) }.map(isShown) ?? false)
         apply(context: context)
+        movePointerIfFocusMoved(focused, displays: displays)
         restoreCoveredStacks(context: context)
         if let display = pendingShownFocus {
             pendingShownFocus = nil
@@ -676,11 +678,19 @@ final class AppController {
             ax.focus(id)
             state.focused = id
             apply()
+            movePointer(toWindow: id, displays: Displays.current())
         } else {
             emptyFocus.wentToEmpty(display: key.display, focused: ax.focusedWindow())
             state.focused = nil
             NSApp.activate()
             apply()
+            let displays = Displays.current()
+            if let display = displays.first(where: { $0.uuid == key.display }),
+                let target = PointerPolicy.destination(
+                    pointer: Displays.pointerLocation(), window: nil, display: display.frame,
+                    rules: settings.movePointer) {
+                Displays.movePointer(to: target)
+            }
         }
     }
 
@@ -721,6 +731,34 @@ final class AppController {
                 lastApplied[id] = nil
             }
         }
+    }
+
+    /// Follows focus to another window, or the same window to another monitor. Focus already standing
+    /// when the app starts doesn't count, and neither does a window just parked.
+    private func movePointerIfFocusMoved(_ focused: WindowID?, displays: [DisplayInfo]) {
+        guard let focused, !(state.key(of: focused).map { !isShown($0) } ?? false),
+            let frame = ax.currentFrame(of: focused), let display = Displays.display(for: frame, in: displays)
+        else { return }
+        guard let last = pointerFollowed else {
+            pointerFollowed = (focused, display.uuid)
+            return
+        }
+        guard last.window != focused || last.display != display.uuid else { return }
+        movePointer(toWindow: focused, displays: displays)
+    }
+
+    private func movePointer(toWindow id: WindowID, displays: [DisplayInfo]) {
+        guard let frame = ax.currentFrame(of: id), let display = Displays.display(for: frame, in: displays) else {
+            return
+        }
+        pointerFollowed = (id, display.uuid)
+        // Never pull the pointer away in the middle of a drag.
+        guard NSEvent.pressedMouseButtons == 0,
+            let target = PointerPolicy.destination(
+                pointer: Displays.pointerLocation(), window: frame, display: display.frame,
+                rules: settings.movePointer)
+        else { return }
+        Displays.movePointer(to: target)
     }
 
     /// Puts parked windows back on screen, for when this app stops managing them.

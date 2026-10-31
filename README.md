@@ -23,6 +23,12 @@ The app writes these when you change something in its interface, and reloads the
 
 The active window border follows `highlight.cornerRadius`, in points: 16 by default, which is what standard macOS windows measure. Apps that draw their own corners may need another value; it's also in Settings → Highlight.
 
+The pointer follows focus, like AeroSpace's `move-mouse`. `movePointer.onWindowFocus` sends it to the center of the focused window when it isn't already over it, and `movePointer.onMonitorChange` sends it to a monitor's center when focus lands on another one, as with an empty workspace. Both are on by default, and they're also in Settings → Highlight.
+
+```json
+{ "movePointer": { "onWindowFocus": true, "onMonitorChange": true } }
+```
+
 The bars above stacked windows have their own settings: `color` as hex, and `hoverDelay`, the seconds the pointer rests on a bar before the panel with the window icons opens, from 0 to 10. Both are also in Settings → Highlight.
 
 ```json
