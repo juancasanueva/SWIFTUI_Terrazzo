@@ -70,8 +70,9 @@ enum GripMetrics {
 /// The handle above a tile: segments for the active tile, dots for inactive stacks, and the bar of
 /// quick actions and window chips when the pointer rests on it.
 final class GripPanel: NSPanel {
-    /// This panel never becomes key, so the first click has to count.
-    private final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    /// This panel never becomes key, so the first click has to count. Not generic: Xcode 26.6's
+    /// optimizer crashes on the deinit of a generic subclass of NSHostingView.
+    private final class FirstClickHostingView: NSHostingView<GripView> {
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 
