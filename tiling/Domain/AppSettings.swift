@@ -54,6 +54,9 @@ struct AppSettings: Codable, Equatable, Sendable {
     var highlight = Highlight()
     var noPeek = NoPeek()
     var hoverFocus = false
+    /// Workspace number to part of a display name, such as `"7": "Odyssey"`. The workspace always
+    /// shows on that display while it is connected.
+    var workspaceDisplays: [String: String] = [:]
     var cleanBackground: CleanBackground = .graphite
     var appearance: AppearanceChoice = .system
     /// Language code, or unset to follow the Mac.

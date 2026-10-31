@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import tiling
 
@@ -72,7 +73,106 @@ struct VirtualWorkspacesTests {
         #expect(origin == CGPoint(x: -499, y: 799))
     }
 
+    // MARK: Pinned workspaces
+
+    private func pinned() -> VirtualWorkspaces {
+        var map = VirtualWorkspaces()
+        map.setPins([1: "LG", 2: "LG", 3: "LG", 7: "SAM", 8: "SAM"])
+        map.sync(displays: ["LG", "SAM"])
+        return map
+    }
+
+    @Test func displaysStartOnTheirLowestPinnedWorkspace() {
+        let map = pinned()
+        #expect(map.number(on: "LG") == 1)
+        #expect(map.number(on: "SAM") == 7)
+    }
+
+    @Test func aPinnedWorkspaceShowsOnItsDisplayEvenWhenEmpty() {
+        var map = pinned()
+        let display = map.show(8, focusedDisplay: "LG", isEmpty: true)
+        #expect(display == "SAM")
+        #expect(map.number(on: "SAM") == 8)
+        #expect(map.number(on: "LG") == 1)
+    }
+
+    @Test func pinnedDisplayIsReportedForMovesToEmptyWorkspaces() {
+        #expect(pinned().pinnedDisplay(of: 3) == "LG")
+        #expect(pinned().pinnedDisplay(of: 7) == "SAM")
+        #expect(pinned().pinnedDisplay(of: 5) == nil)
+    }
+
+    @Test func aPinToADisconnectedDisplayIsIgnored() {
+        var map = pinned()
+        map.sync(displays: ["LG"])
+        #expect(map.pinnedDisplay(of: 7) == nil)
+        #expect(map.show(7, focusedDisplay: "LG", isEmpty: true) == "LG")
+    }
+
+    @Test func reconnectingBringsAPinnedWorkspaceHome() {
+        var map = pinned()
+        map.sync(displays: ["LG"])
+        _ = map.show(7, focusedDisplay: "LG", isEmpty: false)
+        map.sync(displays: ["LG", "SAM"])
+        #expect(map.number(on: "SAM") == 7)
+        #expect(map.number(on: "LG") != 7)
+    }
+
+    @Test func aNewPinMovesAWorkspaceShowingOnTheWrongDisplay() {
+        var map = synced(["LG", "SAM"])
+        #expect(map.number(on: "SAM") == 2)
+        map.setPins([2: "LG", 7: "SAM"])
+        map.sync(displays: ["LG", "SAM"])
+        #expect(map.number(on: "SAM") == 7)
+    }
+
+    @Test func aDisplayWithoutPinsAvoidsWorkspacesPinnedElsewhere() {
+        var map = VirtualWorkspaces()
+        map.setPins([1: "LG", 2: "LG"])
+        map.sync(displays: ["LG", "OTHER"])
+        #expect(map.number(on: "OTHER") == 3)
+    }
+
+    @Test func namesPickTheFirstMatchingDisplayIgnoringCase() {
+        let displays = [(uuid: "a", name: "LG ULTRAWIDE"), (uuid: "b", name: "Odyssey G5")]
+        let pins = VirtualWorkspaces.resolvePins(["1": "lg", "7": "odyssey", "8": "Dell", "x": "LG", "12": "LG"], displays: displays)
+        #expect(pins == [1: "a", 7: "b"])
+    }
+
+    @Test func aDisplayReturnsToTheWorkspaceItLeft() {
+        var map = synced(["A"])
+        map.sync(displays: [])
+        map.sync(displays: ["A"])
+        #expect(map.number(on: "A") == 1)
+    }
+
+    @Test func reconnectingOverAndOverKeepsTheSameWorkspace() {
+        var map = synced(["A", "B"])
+        for _ in 0..<12 {
+            map.sync(displays: ["A"])
+            map.sync(displays: ["A", "B"])
+        }
+        #expect(map.number(on: "B") == 2)
+    }
+
+    @Test func aPinnedWorkspaceSavedBySettingsLoads() throws {
+        var settings = AppSettings()
+        settings.workspaceDisplays = ["1": "LG"]
+        let data = try JSONEncoder().encode(settings)
+        #expect(try JSONDecoder().decode(AppSettings.self, from: data).workspaceDisplays == ["1": "LG"])
+    }
+
     // MARK: Windows
+
+    @Test func mergingBringsAWorkspacesWindowsToItsDisplay() {
+        let source = WorkspaceKey(display: "A", space: 1, virtual: 2)
+        let target = WorkspaceKey(display: "B", space: 1, virtual: 2)
+        var state = filled([1, 2], on: source)
+        state.mergeWorkspace(from: source, into: target, context: context(showing: target))
+        #expect(state.workspaces[source] == nil)
+        #expect(state.workspaces[target]?.tiles.map(\.windows) == [[1], [2]])
+        #expect(state.apps[1] == "app")
+    }
 
     private let one = WorkspaceKey(display: "A", space: 1)
     private let three = WorkspaceKey(display: "A", space: 1, virtual: 3)
@@ -142,6 +242,13 @@ struct VirtualWorkspacesTests {
         var state = filled([1], on: one)
         let next = state.send(1, to: three, context: context(showing: one))
         #expect(next == nil)
+    }
+
+    @Test func aWindowSentToACleanWorkspaceJoinsIt() {
+        var state = filled([1], on: one)
+        state.toggleClean(on: three, active: nil)
+        _ = state.send(1, to: three, context: context(showing: one))
+        #expect(state.workspaces[three]?.cleanSet == [1])
     }
 
     // MARK: Shortcuts

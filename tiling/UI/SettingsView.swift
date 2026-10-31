@@ -118,6 +118,11 @@ private struct LayoutSettings: View {
                     }
                 }
             }
+            Section("Workspace displays") {
+                ForEach(Array(VirtualWorkspaces.numbers), id: \.self) { number in
+                    workspacePicker(number)
+                }
+            }
             Section("Screen edges") {
                 Picker("Apply to", selection: $edgeScope) {
                     Text("All screens").tag("all")
@@ -130,6 +135,22 @@ private struct LayoutSettings: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func workspacePicker(_ number: Int) -> some View {
+        let key = String(number)
+        let selection = Binding<String>(
+            get: { controller.settings.workspaceDisplays[key] ?? "" },
+            set: { controller.settings.workspaceDisplays[key] = $0.isEmpty ? nil : $0 })
+        var names = Displays.current().map(\.name)
+        // A pin can be part of a name, or name a monitor that isn't connected: keep it selectable.
+        if !selection.wrappedValue.isEmpty, !names.contains(selection.wrappedValue) {
+            names.append(selection.wrappedValue)
+        }
+        return Picker(String(localized: "Workspace \(number)"), selection: selection) {
+            Text("Any display").tag("")
+            ForEach(names, id: \.self) { Text($0).tag($0) }
+        }
     }
 
     private func edgeSlider(_ title: LocalizedStringKey, _ edge: WritableKeyPath<ScreenEdges, CGFloat>) -> some View {

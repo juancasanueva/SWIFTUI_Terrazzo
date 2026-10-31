@@ -51,6 +51,12 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 
 There are nine numbered workspaces, separate from macOS Spaces, working like AeroSpace's: each display shows one, and a workspace not showing keeps its windows parked in a corner of the screen. Pressing a number goes to that workspace wherever it is. Floating and excluded apps' windows stay visible on every workspace. Parked windows come back when the app quits or tiling is paused; after a crash they are tiled again on the next launch, on one workspace.
 
+To keep workspaces on particular monitors, map numbers to part of a monitor's name in `settings.json`, or use Settings → Layout → Workspace displays. A workspace always shows on its monitor while that monitor is connected, and otherwise comes to the focused one.
+
+```json
+{ "workspaceDisplays": { "1": "LG", "2": "LG", "7": "Odyssey", "8": "Odyssey" } }
+```
+
 On layouts where ⌥ + number types a character (⌥2 is `@` on Spanish keyboards), those characters can't be typed while the app runs. Rebind `workspace1`…`workspace9` and `moveToWorkspace1`…`moveToWorkspace9` in `shortcuts.json` if you need them.
 
 ## Layout of the code

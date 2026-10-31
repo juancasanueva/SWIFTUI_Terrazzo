@@ -88,6 +88,7 @@ final class AppController {
     /// Windows parked in a corner because their workspace isn't showing.
     @ObservationIgnored private var hiddenWindows: Set<WindowID> = []
     @ObservationIgnored private var lastWorkspaceSwitch = Date.distantPast
+    @ObservationIgnored private var pendingShownFocus: String?
     @ObservationIgnored private var terminationSource: DispatchSourceSignal?
     @ObservationIgnored private var pendingPids: Set<pid_t> = []
     @ObservationIgnored private var followUps: Set<pid_t> = []
@@ -150,8 +151,13 @@ final class AppController {
             forName: Notification.Name("com.apple.screenIsLocked"), object: nil, queue: .main, using: endClean)
         DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name("com.apple.screenIsUnlocked"), object: nil, queue: .main, using: refreshAll)
+        // Parked corners depend on the arrangement, so they are worked out again.
         NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: refreshAll)
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.hiddenWindows = []
+            self?.scheduleRefresh(pid: nil)
+        }
 
         // A plain `kill` must also bring parked windows back.
         signal(SIGTERM, SIG_IGN)
@@ -401,6 +407,10 @@ final class AppController {
             focusedApp: focusedOtherApp(), existing: Self.existingWindows())
         show(state.reconcile(snapshot, context: context))
         apply(context: context)
+        if let display = pendingShownFocus {
+            pendingShownFocus = nil
+            focusShowingWindow(on: visibleKey(display))
+        }
     }
 
     private func focusedOtherApp() -> String? {
@@ -445,9 +455,27 @@ final class AppController {
     func isParked(_ id: WindowID) -> Bool { hiddenWindows.contains(id) }
 
     private func syncWorkspaces() {
+        let displays = Displays.current()
         var updated = workspaceMap
-        updated.sync(displays: Displays.current().map(\.uuid))
+        updated.setPins(
+            VirtualWorkspaces.resolvePins(
+                settings.workspaceDisplays, displays: displays.map { ($0.uuid, $0.name) }))
+        updated.sync(displays: displays.map(\.uuid))
         if updated != workspaceMap { workspaceMap = updated }
+        bringWorkspacesToPinnedDisplays(displays: displays)
+    }
+
+    private func bringWorkspacesToPinnedDisplays(displays: [DisplayInfo]) {
+        for key in Array(state.workspaces.keys) {
+            guard let pin = workspaceMap.pinnedDisplay(of: key.virtual), pin != key.display,
+                displays.contains(where: { $0.uuid == key.display }),
+                key.space == spaces.activeSpace(ofDisplay: key.display)
+            else { continue }
+            let target = WorkspaceKey(display: pin, space: spaces.activeSpace(ofDisplay: pin), virtual: key.virtual)
+            state.allWindows(on: key).forEach { hiddenWindows.remove($0) }
+            hydrate(target)
+            state.mergeWorkspace(from: key, into: target, context: context(displays: displays))
+        }
     }
 
     /// Cmd-Tab, the Dock or a notification can pick a parked window: go to its workspace. Only a change
@@ -456,6 +484,12 @@ final class AppController {
         guard let focused, focused != state.focused, Date().timeIntervalSince(lastWorkspaceSwitch) > 0.7,
             let key = state.key(of: focused), isParked(focused, displays: Displays.current())
         else { return }
+        // Closing a window hands focus to another of the app's windows, which may be parked. The user
+        // didn't ask to go there, so stay and give focus to what is showing.
+        if let previous = state.focused, let existing = Self.existingWindows(), !existing.contains(previous) {
+            pendingShownFocus = key.display
+            return
+        }
         _ = workspaceMap.show(key.virtual, focusedDisplay: key.display, isEmpty: false)
     }
 
@@ -482,8 +516,10 @@ final class AppController {
     func moveFocusedWindow(toWorkspace number: Int) {
         guard isOperating, let id = shownFocusedWindow(), let source = state.key(of: id) else { return }
         syncWorkspaces()
+        guard state.workspaces[source]?.tiles.contains(where: { $0.windows.contains(id) }) == true else { return }
         let display =
-            workspaceMap.display(showing: number)
+            workspaceMap.pinnedDisplay(of: number)
+            ?? workspaceMap.display(showing: number)
             ?? (isWorkspaceEmpty(number) ? nil : workspaceMap.home(of: number))
             ?? source.display
         let target = WorkspaceKey(
@@ -507,6 +543,27 @@ final class AppController {
         } else {
             state.focused = nil
             NSApp.activate()
+        }
+    }
+
+    /// Parked windows the plan won't place: floats of a full workspace, windows behind Clean Space, and
+    /// windows no longer tiled at all, such as an app just excluded.
+    private func bringBackWindowsWithoutAPlace(context: TilingContext) {
+        for screen in context.screens {
+            for id in state.allWindows(on: screen.key) where hiddenWindows.remove(id) != nil {
+                center(id, context: context)
+            }
+        }
+        let released = hiddenWindows.filter { state.key(of: $0) == nil }
+        guard !released.isEmpty else { return }
+        let displays = Displays.current()
+        for id in released {
+            hiddenWindows.remove(id)
+            guard let frame = ax.currentFrame(of: id),
+                let display = Displays.display(containing: frame.origin, in: displays)
+            else { continue }
+            let area = display.visibleFrame
+            ax.move(id, to: CGPoint(x: area.midX - frame.width / 2, y: area.midY - frame.height / 2))
         }
     }
 
@@ -587,6 +644,7 @@ final class AppController {
 
         for id in plan.centered { center(id, context: context) }
         for placement in plan.placements { hiddenWindows.remove(placement.id) }
+        bringBackWindowsWithoutAPlace(context: context)
         hideWindowsOfOtherWorkspaces(context: context)
 
         let showing = Set(plan.showing)
@@ -776,6 +834,8 @@ final class AppController {
 
     private func floatCommand(always: Bool) {
         guard let id = ax.focusedWindow(), let record = ax.record(id) else { return }
+        // macOS can keep reporting a window that was just parked.
+        if let key = state.key(of: id), !isShown(key) { return }
         if always {
             if !rules.excluded.contains(record.bundleID) { rules.excluded.append(record.bundleID) }
             return
@@ -871,13 +931,18 @@ final class AppController {
                 let rect = CGRect(dictionaryRepresentation: bounds),
                 rect.insetBy(dx: -tolerance, dy: -tolerance).contains(point),
                 let number = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
-                let owner = (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value, owner != getpid(),
-                // Border and overlay utilities draw over windows without taking their clicks.
-                NSRunningApplication(processIdentifier: owner)?.activationPolicy == .regular
+                let owner = (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value, owner != getpid()
             else { continue }
             let layer = (entry[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0
-            // Menus, the Dock and other windows above the normal level take the point.
-            if layer != 0 { return nil }
+            if layer != 0 {
+                // Notification Center and others keep invisible full-screen windows up here.
+                if Displays.current().contains(where: { rect.contains($0.frame) }) { continue }
+                // Menus, the Dock and other small windows above the normal level take the point.
+                return nil
+            }
+            // Border utilities draw over windows without taking clicks; they have no app to activate.
+            let policy = NSRunningApplication(processIdentifier: owner)?.activationPolicy
+            if policy == nil || policy == .prohibited { continue }
             guard let key = state.key(of: number), isShown(key) else { return nil }
             return number
         }

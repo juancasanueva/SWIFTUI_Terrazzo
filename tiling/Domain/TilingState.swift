@@ -535,6 +535,16 @@ struct TilingState: Equatable {
         return true
     }
 
+    /// Moves a whole workspace to another display.
+    mutating func mergeWorkspace(from source: WorkspaceKey, into target: WorkspaceKey, context: TilingContext) {
+        guard source != target, let moved = workspaces.removeValue(forKey: source) else { return }
+        var merged = workspaces[target] ?? Workspace()
+        merged.tiles += moved.tiles
+        merged.overflow += moved.overflow
+        workspaces[target] = merged
+        normalize(target, pull: false, context: context)
+    }
+
     /// Sends a window to a workspace, showing or not; limits apply when it next shows.
     /// Returns the window to focus in the workspace it left.
     mutating func send(_ id: WindowID, to target: WorkspaceKey, context: TilingContext) -> WindowID? {
@@ -543,6 +553,7 @@ struct TilingState: Equatable {
         else { return nil }
         remove(id, minimized: false, keepingApp: true, context: context)
         workspaces[target, default: Workspace()].tiles.append(Tile(windows: [id]))
+        if workspaces[target]?.cleanSet != nil { workspaces[target]?.cleanSet?.append(id) }
         normalize(target, pull: false, context: context)
         guard let left = workspaces[source] else { return nil }
         return left.tiles[safe: left.activeTile]?.windows.first ?? left.tiles.first?.windows.first

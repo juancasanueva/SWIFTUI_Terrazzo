@@ -23,6 +23,8 @@ final class AXWindowSystem {
     private var observers: [pid_t: AXObserver] = [:]
     private var observedWindows: Set<WindowID> = []
     private var cache: [pid_t: [WindowRecord]] = [:]
+    /// Windows of hidden apps: not on screen to tile, but still reachable to move.
+    private var hiddenAppRecords: [pid_t: [WindowRecord]] = [:]
     /// Called on the main thread with the app whose windows changed.
     var onChange: ((pid_t) -> Void)?
 
@@ -48,11 +50,19 @@ final class AXWindowSystem {
         let apps = Self.eligibleApps()
         let alive = Set(apps.map(\.processIdentifier))
         cache = cache.filter { alive.contains($0.key) }
+        hiddenAppRecords = hiddenAppRecords.filter { alive.contains($0.key) }
         for (stale, _) in observers where !alive.contains(stale) { observers[stale] = nil }
 
         for app in apps where pid == nil || app.processIdentifier == pid || cache[app.processIdentifier] == nil {
             observe(app)
-            cache[app.processIdentifier] = app.isHidden ? [] : records(of: app)
+            let pid = app.processIdentifier
+            if app.isHidden {
+                if let known = cache[pid], !known.isEmpty { hiddenAppRecords[pid] = known }
+                cache[pid] = []
+            } else {
+                hiddenAppRecords[pid] = nil
+                cache[pid] = records(of: app)
+            }
         }
         return cache.values.flatMap { $0 }
     }
@@ -64,6 +74,7 @@ final class AXWindowSystem {
         observers = [:]
         observedWindows = []
         cache = [:]
+        hiddenAppRecords = [:]
     }
 
     private func records(of app: NSRunningApplication) -> [WindowRecord] {
@@ -123,6 +134,9 @@ final class AXWindowSystem {
 
     func record(_ id: WindowID) -> WindowRecord? {
         for records in cache.values {
+            if let match = records.first(where: { $0.id == id }) { return match }
+        }
+        for records in hiddenAppRecords.values {
             if let match = records.first(where: { $0.id == id }) { return match }
         }
         return nil
