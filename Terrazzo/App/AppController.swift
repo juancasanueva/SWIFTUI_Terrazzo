@@ -108,6 +108,7 @@ final class AppController {
     @ObservationIgnored private var pendingAll = false
     @ObservationIgnored private var refreshScheduled = false
     @ObservationIgnored private var lastShowing: Set<WindowID> = []
+    @ObservationIgnored private var focusRaise = FocusRaiseTracker()
     @ObservationIgnored private var lastApplied: [WindowID: (requested: CGRect, accepted: CGRect)] = [:]
     @ObservationIgnored private(set) var recentWindows: [WindowID] = []
     @ObservationIgnored private var pollTimer: Timer?
@@ -839,12 +840,17 @@ final class AppController {
         hideWindowsOfOtherWorkspaces(context: context)
 
         let showing = Set(plan.showing)
-        for id in plan.showing where !lastShowing.contains(id) { ax.raise(id) }
+        let newlyShowing = plan.showing.filter { !lastShowing.contains($0) }
+        newlyShowing.forEach(ax.raise)
         lastShowing = showing
-        for screen in context.screens {
-            if let zoomed = state.workspaces[screen.key]?.zoomed { ax.raise(zoomed) }
+        let zoomedWindows = context.screens.compactMap { state.workspaces[$0.key]?.zoomed }
+        zoomedWindows.forEach(ax.raise)
+        let shownFocus = state.focused.flatMap { showing.contains($0) ? $0 : nil }
+        let othersRaised =
+            !plan.centered.isEmpty || !newlyShowing.isEmpty || zoomedWindows.contains { $0 != shownFocus }
+        if focusRaise.shouldRaise(focused: shownFocus, othersRaised: othersRaised), let shownFocus {
+            ax.raise(shownFocus)
         }
-        if let focused = state.focused, showing.contains(focused) { ax.raise(focused) }
 
         if learnedNewMinimum, depth < 2 {
             state.refreshLimits(context: context)
