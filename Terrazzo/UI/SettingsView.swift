@@ -479,6 +479,11 @@ private struct AppsSettings: View {
     }
 }
 
+enum ProjectLinks {
+    static let repository = URL(string: "https://github.com/juancasanueva/SWIFTUI_Terrazzo")!
+    static let license = repository.appending(path: "blob/main/LICENSE")
+}
+
 private struct AboutSettings: View {
     @Bindable var controller: AppController
     @State private var includeDiagnostics = true
@@ -490,9 +495,27 @@ private struct AboutSettings: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Terrazzo", value: version)
+                LabeledContent {
+                    Text(verbatim: version)
+                } label: {
+                    HStack(spacing: 10) {
+                        // Follows the icon style chosen in General.
+                        Image(nsImage: NSApp.applicationIconImage)
+                            .resizable()
+                            .frame(width: 48, height: 48)
+                            .id(controller.settings.iconStyle)
+                            .accessibilityHidden(true)
+                        Text("Terrazzo")
+                    }
+                }
                 LabeledContent("Config folder", value: ConfigDirectory.url().path)
                 Button("Open Config Folder") { NSWorkspace.shared.open(ConfigDirectory.url()) }
+                LabeledContent("License") {
+                    Link("MIT License", destination: ProjectLinks.license)
+                }
+                LabeledContent("Source code") {
+                    Link(destination: ProjectLinks.repository) { Text(verbatim: "GitHub") }
+                }
             }
             Section("Updates") {
                 Toggle("Automatically check for updates", isOn: $controller.settings.automaticUpdateChecks)

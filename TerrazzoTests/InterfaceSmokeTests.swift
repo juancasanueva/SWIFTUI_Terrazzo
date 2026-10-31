@@ -163,3 +163,16 @@ struct GripMetricsTests {
         #expect(settings.stackBar.color == "#FF9500")
     }
 }
+
+struct ProjectLinksTests {
+    @Test func aboutLinksToTheRepositoryAndItsLicense() {
+        #expect(ProjectLinks.repository.absoluteString == "https://github.com/juancasanueva/SWIFTUI_Terrazzo")
+        #expect(ProjectLinks.license.absoluteString == "https://github.com/juancasanueva/SWIFTUI_Terrazzo/blob/main/LICENSE")
+    }
+
+    @Test func theLicenseFileIsTheOneAboutNames() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let license = try String(contentsOf: root.appendingPathComponent("LICENSE"), encoding: .utf8)
+        #expect(license.hasPrefix("MIT License"))
+    }
+}
