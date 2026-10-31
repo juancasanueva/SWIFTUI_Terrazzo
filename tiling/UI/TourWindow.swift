@@ -129,7 +129,7 @@ private struct TourView: View {
                 shortcutLine("⌃F", "Focus mode")
                 shortcutLine("⌃⌥D", "No peek mode")
                 shortcutLine("⌃⌥P", "Clean Space")
-                shortcutLine("⌥⇥", "Tab View")
+                shortcutLine("⌃⇥", "Tab View")
             }
             Text("Your settings live in \(ConfigDirectory.url().path)")
                 .font(.caption).foregroundStyle(.secondary)

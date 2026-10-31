@@ -123,8 +123,8 @@ struct ConfigTests {
         #expect(map.combo(for: .makePrimary)?.symbols == "⌃⌥↩")
         #expect(map.combo(for: .nextInTile)?.symbols == "⌃N")
         #expect(map.combo(for: .previousInTile)?.symbols == "⌃⇧N")
-        #expect(map.combo(for: .tabView)?.symbols == "⌥⇥")
-        #expect(map.combo(for: .tabViewBackward)?.symbols == "⌥⇧⇥")
+        #expect(map.combo(for: .tabView)?.symbols == "⌃⇥")
+        #expect(map.combo(for: .tabViewBackward)?.symbols == "⌃⇧⇥")
         #expect(map.combo(for: .alwaysFloat)?.symbols == "⌃⌥⇧F")
         #expect(map.combo(for: .cleanSpace)?.symbols == "⌃⌥P")
         #expect(map.combo(for: .tile5)?.symbols == "⌃⌥⌘5")
@@ -200,7 +200,7 @@ struct ConfigTests {
         #expect(map.combo(for: .retile)?.symbols == "⌥⌘R")
         #expect(map.combo(for: .swapLeft)?.symbols == "⌃⇧←")
         #expect(map.combo(for: .focus)?.symbols == "⌃⇧Y")
-        #expect(map.combo(for: .tabView)?.symbols == "⌥⇥")
+        #expect(map.combo(for: .tabView)?.symbols == "⌃⇥")
     }
 
     @Test func turningOffKeepsTheActionListedWithoutKeys() {

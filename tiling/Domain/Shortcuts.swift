@@ -243,7 +243,7 @@ struct ShortcutMap: Codable, Equatable, Sendable {
         }
         // These don't follow the prefix either.
         if action == .tabView {
-            return KeyCombo(key: suffix.key, modifiers: .option)
+            return KeyCombo(key: suffix.key, modifiers: .control)
         }
         if action.focusDirection != nil {
             return KeyCombo(key: suffix.key, modifiers: .control)
