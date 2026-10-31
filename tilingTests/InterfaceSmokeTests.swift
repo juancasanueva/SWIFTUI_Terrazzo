@@ -71,6 +71,12 @@ struct GripMetricsTests {
         }
     }
 
+    @Test func theActionsBarWaitsAndItsIconsAreLarge() {
+        #expect(GripMetrics.expandDelay >= .milliseconds(1000))
+        #expect(GripMetrics.chipIconSize >= 36)
+        #expect(GripMetrics.expandedSize.height >= GripMetrics.chipIconSize + 56)
+    }
+
     @Test func segmentsKeepTheirPlaceAndOnlyTheLongOneMoves() {
         let first = GripMetrics.segments(of: [4, 3])
         #expect(first.map(\.id) == [4, 3])

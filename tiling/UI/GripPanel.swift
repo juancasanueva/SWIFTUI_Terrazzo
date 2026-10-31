@@ -18,6 +18,10 @@ enum GripMetrics {
     static let dotSize: CGFloat = 12
     static let dotTarget: CGFloat = 24
     static let spacing: CGFloat = 4
+    /// How long the pointer must rest on the bar before the actions bar opens.
+    static let expandDelay: Duration = .milliseconds(1200)
+    static let chipIconSize: CGFloat = 36
+    static let expandedSize = CGSize(width: 440, height: 104)
     private static let sidePadding: CGFloat = 8
 
     struct Segment: Equatable {
@@ -53,7 +57,6 @@ final class GripPanel: NSPanel {
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 
-    private static let expandedSize = CGSize(width: 440, height: 84)
 
     private let model = GripModel()
     private var anchor: CGRect = .zero
@@ -91,7 +94,7 @@ final class GripPanel: NSPanel {
     private func reposition() {
         let size: CGSize
         if model.expanded {
-            size = Self.expandedSize
+            size = GripMetrics.expandedSize
         } else {
             size = GripMetrics.collapsedSize(count: model.windows.count, isActive: model.isActive)
         }
@@ -153,7 +156,7 @@ private struct GripView: View {
     private func hoverChanged(_ hovering: Bool) {
         pendingExpansion?.cancel()
         pendingExpansion = Task {
-            try? await Task.sleep(for: .milliseconds(hovering ? 500 : 400))
+            try? await Task.sleep(for: hovering ? GripMetrics.expandDelay : .milliseconds(400))
             // Replacing the segments mid-click would lose the click.
             guard !Task.isCancelled, model.isActive || !hovering, NSEvent.pressedMouseButtons == 0 else { return }
             if model.expanded != hovering {
@@ -242,13 +245,14 @@ private struct WindowChip: View {
     var body: some View {
         HStack(spacing: 2) {
             if let pid = record?.pid, let icon = NSRunningApplication(processIdentifier: pid)?.icon {
-                Image(nsImage: icon).resizable().frame(width: 18, height: 18)
+                Image(nsImage: icon).resizable()
+                    .frame(width: GripMetrics.chipIconSize, height: GripMetrics.chipIconSize)
             }
             if isHovering {
                 Button {
                     controller.closeWindow(id)
                 } label: {
-                    Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                    Image(systemName: "xmark").font(.system(size: 12, weight: .bold))
                 }
                 .buttonStyle(.plain)
                 .help(Text("Close window"))
