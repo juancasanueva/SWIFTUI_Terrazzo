@@ -563,6 +563,25 @@ struct TilingState: Equatable {
         workspaces[key] = workspace
     }
 
+    /// The window that directional focus lands on: the neighbor, or the nearest on the next screen.
+    func focusTarget(from id: WindowID, direction: Direction, context: TilingContext) -> WindowID? {
+        guard let key = key(of: id), let workspace = workspaces[key], workspace.cleanSet == nil,
+            let tile = workspace.tiles.firstIndex(where: { $0.windows.contains(id) })
+        else { return nil }
+        let frames = slotFrames(on: key, context: context)
+        guard let current = frames[safe: tile] else { return nil }
+        if let neighbor = Self.neighbor(of: current, in: frames, direction: direction) {
+            return workspace.tiles[safe: neighbor]?.windows.first
+        }
+        guard let target = nextScreen(from: key, direction: direction, context: context) else { return nil }
+        let targetFrames = slotFrames(on: target, context: context)
+        let center = CGPoint(x: current.midX, y: current.midY)
+        let nearest = targetFrames.indices.min {
+            Self.distance(targetFrames[$0], center) < Self.distance(targetFrames[$1], center)
+        }
+        return nearest.flatMap { workspaces[target]?.tiles[safe: $0]?.windows.first }
+    }
+
     func adjacentWindow(to id: WindowID, forward: Bool) -> WindowID? {
         guard let key = key(of: id), let workspace = workspaces[key] else { return nil }
         let showing = workspace.tiles.compactMap(\.windows.first)

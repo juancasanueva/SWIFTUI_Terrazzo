@@ -201,6 +201,10 @@ private struct HighlightSettings: View {
 extension ShortcutAction {
     var title: LocalizedStringKey {
         switch self {
+        case .focusLeft: "Focus the window on the left"
+        case .focusRight: "Focus the window on the right"
+        case .focusUp: "Focus the window above"
+        case .focusDown: "Focus the window below"
         case .swapLeft: "Swap with the window on the left"
         case .swapRight: "Swap with the window on the right"
         case .swapUp: "Swap with the window above"

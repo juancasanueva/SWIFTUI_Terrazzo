@@ -92,6 +92,24 @@ struct ConfigTests {
         #expect(map.combo(for: .tile5)?.symbols == "⌃⌥⌘5")
     }
 
+    @Test func directionalFocusDefaultsToOptionArrowsWhateverThePrefix() {
+        var map = ShortcutMap()
+        #expect(map.combo(for: .focusLeft)?.symbols == "⌥←")
+        #expect(map.combo(for: .focusRight)?.symbols == "⌥→")
+        #expect(map.combo(for: .focusUp)?.symbols == "⌥↑")
+        #expect(map.combo(for: .focusDown)?.symbols == "⌥↓")
+        map.prefix = .controlShift
+        #expect(map.combo(for: .focusLeft)?.symbols == "⌥←")
+    }
+
+    @Test func directionalFocusCanBeRebound() {
+        var map = ShortcutMap()
+        map.bindings[ShortcutAction.focusLeft.rawValue] = "ctrl+h"
+        #expect(map.combo(for: .focusLeft)?.symbols == "⌃H")
+        map.bindings[ShortcutAction.focusRight.rawValue] = ShortcutMap.off
+        #expect(map.combo(for: .focusRight) == nil)
+    }
+
     @Test func prefixMovesEveryUnchangedShortcutExceptTabView() {
         var map = ShortcutMap()
         map.bindings[ShortcutAction.focus.rawValue] = "ctrl+shift+y"

@@ -41,7 +41,7 @@ final class TabViewController {
         self.controller = controller
     }
 
-    private var isOpen: Bool { panel?.isVisible == true }
+    var isOpen: Bool { panel?.isVisible == true }
 
     func pressed(backward: Bool) {
         if isOpen {
@@ -155,7 +155,7 @@ final class TabViewController {
         model.selection = ordered[next].id
     }
 
-    private func moveSelection(_ direction: Direction) {
+    func moveSelection(_ direction: Direction) {
         let entries = model.screens.flatMap(\.entries)
         guard let current = entries.first(where: { $0.id == model.selection }) else { return }
         let frames = entries.map(\.frame)

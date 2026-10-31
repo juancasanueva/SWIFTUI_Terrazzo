@@ -279,6 +279,45 @@ struct TilingStateTests {
         #expect(tiles(state) == [[1]])
     }
 
+    @Test func directionalFocusFindsTheNeighbor() {
+        let state = filled([1, 2, 3])
+        #expect(state.focusTarget(from: 1, direction: .right, context: context()) == 2)
+        #expect(state.focusTarget(from: 2, direction: .down, context: context()) == 3)
+        #expect(state.focusTarget(from: 3, direction: .left, context: context()) == 1)
+        #expect(state.focusTarget(from: 1, direction: .left, context: context()) == nil)
+    }
+
+    @Test func directionalFocusDoesNotChangeTheLayout() {
+        let state = filled([1, 2, 3])
+        _ = state.focusTarget(from: 1, direction: .right, context: context())
+        #expect(tiles(state) == [[1], [2], [3]])
+    }
+
+    @Test func directionalFocusLandsOnTheShowingWindowOfAStack() {
+        var state = filled([1, 2, 3])
+        _ = state.reconcile(snapshot([1, 2, 3], focused: 3), context: context())
+        _ = state.reconcile(snapshot([1, 2, 3, 4]), context: context())
+        #expect(state.focusTarget(from: 2, direction: .down, context: context()) == 4)
+    }
+
+    @Test func directionalFocusCrossesToTheNearestWindowOnTheNextScreen() {
+        let ctx = context(oneScreen: false)
+        var state = TilingState()
+        _ = state.reconcile(
+            Snapshot(
+                windows: [ObservedWindow(id: 1, app: "app", key: left, frame: .zero)]
+                    + [5, 6].map { ObservedWindow(id: $0, app: "app", key: right, frame: .zero) },
+                minimized: [], focused: nil), context: ctx)
+        #expect(state.focusTarget(from: 1, direction: .right, context: ctx) == 5)
+        #expect(state.focusTarget(from: 5, direction: .left, context: ctx) == 1)
+    }
+
+    @Test func directionalFocusStaysPutInCleanSpace() {
+        var state = filled([1, 2])
+        state.toggleClean(on: left, active: 1)
+        #expect(state.focusTarget(from: 1, direction: .right, context: context()) == nil)
+    }
+
     @Test func activateNextWrapsAcrossTiles() {
         let state = filled([1, 2, 3])
         #expect(state.adjacentWindow(to: 3, forward: true) == 1)

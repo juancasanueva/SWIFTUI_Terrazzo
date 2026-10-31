@@ -102,6 +102,7 @@ enum ShortcutPrefix: String, Codable, CaseIterable, Sendable {
 }
 
 enum ShortcutAction: String, CaseIterable, Codable, Sendable {
+    case focusLeft, focusRight, focusUp, focusDown
     case swapLeft, swapRight, swapUp, swapDown
     case makePrimary, nextWindow, previousWindow, nextInTile, previousInTile, tabView, tabViewBackward
     case bigger, smaller, resetSizes
@@ -110,6 +111,10 @@ enum ShortcutAction: String, CaseIterable, Codable, Sendable {
 
     fileprivate var defaultSuffix: (key: ShortcutKey, extra: KeyModifiers) {
         switch self {
+        case .focusLeft: (.left, [])
+        case .focusRight: (.right, [])
+        case .focusUp: (.up, [])
+        case .focusDown: (.down, [])
         case .swapLeft: (.left, [])
         case .swapRight: (.right, [])
         case .swapUp: (.up, [])
@@ -135,6 +140,16 @@ enum ShortcutAction: String, CaseIterable, Codable, Sendable {
         case .tile3: (.n3, .command)
         case .tile4: (.n4, .command)
         case .tile5: (.n5, .command)
+        }
+    }
+
+    var focusDirection: Direction? {
+        switch self {
+        case .focusLeft: .left
+        case .focusRight: .right
+        case .focusUp: .up
+        case .focusDown: .down
+        default: nil
         }
     }
 
@@ -176,7 +191,8 @@ struct ShortcutMap: Codable, Equatable, Sendable {
         if action == .tabViewBackward {
             return combo(for: .tabView).map { KeyCombo(key: $0.key, modifiers: $0.modifiers.union(.shift)) }
         }
-        if action == .tabView {
+        // Like Tab View, these stay on Option when the prefix changes.
+        if action == .tabView || action.focusDirection != nil {
             return KeyCombo(key: suffix.key, modifiers: .option)
         }
         if action.tileCount != nil, let tileModifiers,

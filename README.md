@@ -29,6 +29,7 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 
 | Keys | Action |
 | --- | --- |
+| ⌥ ←→↑↓ | Focus the window in that direction, or the next screen. Takes over word navigation in text fields; rebind it if you need that |
 | ⌃⌥ ←→↑↓ | Swap with the neighbor, or move to the next screen |
 | ⌃⌥↩ | Make the active window primary |
 | ⌃⌥] ⌃⌥[ | Activate next / previous window |

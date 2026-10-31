@@ -562,6 +562,16 @@ final class AppController {
             tabView.pressed(backward: action == .tabViewBackward)
             return
         }
+        if let direction = action.focusDirection {
+            // Tab View uses the same keys to move its selection while it is open.
+            if tabView.isOpen {
+                tabView.moveSelection(direction)
+            } else if let id = ax.focusedWindow(),
+                let target = state.focusTarget(from: id, direction: direction, context: context()) {
+                showWindow(target)
+            }
+            return
+        }
         let context = context()
         if let count = action.tileCount {
             guard let key = activeKey() else { return }
