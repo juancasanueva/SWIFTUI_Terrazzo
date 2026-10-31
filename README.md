@@ -21,7 +21,7 @@ xcodebuild build -scheme Terrazzo -configuration Release -destination 'platform=
 open build/DerivedData/Build/Products/Release/Terrazzo.app
 ```
 
-The project is signed with its author's team. To build it yourself, set your own team under Signing & Capabilities, or change `DEVELOPMENT_TEAM` in `Terrazzo.xcodeproj/project.xcproj`.
+The project is signed with its author's team. To build it yourself, set your own team under Signing & Capabilities, or change `DEVELOPMENT_TEAM` in `Terrazzo.xcodeproj/project.pbxproj`.
 
 On first launch a short tour asks for Accessibility access. Nothing moves until its last step, **Tidy My Workspace**.
 
