@@ -32,8 +32,9 @@ struct InterfaceSmokeTests {
 
     @Test func everyShortcutHasKeysAndAUniqueDefault() {
         let map = ShortcutMap()
-        let combos = ShortcutAction.allCases.compactMap { map.combo(for: $0) }
-        #expect(combos.count == ShortcutAction.allCases.count)
+        let unassigned: Set<ShortcutAction> = [.bigger, .smaller]
+        let combos = ShortcutAction.allCases.filter { !unassigned.contains($0) }.compactMap { map.combo(for: $0) }
+        #expect(combos.count == ShortcutAction.allCases.count - unassigned.count)
         #expect(Set(combos).count == combos.count)
     }
 

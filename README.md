@@ -44,7 +44,8 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 | ⌃⌥] ⌃⌥[ | Activate next / previous window |
 | ⌃⌥\` ⌃⌥⇧\` | Next / previous window in this tile |
 | ⌥⇥ ⌥⇧⇥ | Tab View |
-| ⌃⌥= ⌃⌥- ⌃⌥0 | Bigger / smaller / reset sizes |
+| ⌃⌥ ←→↑↓ | Resize: move the window's edge that way. The edge on that side if it has a neighbor there, otherwise the opposite edge, so the window shrinks |
+| ⌃⌥0 | Reset sizes |
 | ⌃⌥F ⌃⌥⇧F | Float / always float this app |
 | ⌃⌥Z | Focus mode |
 | ⌃⌥D | No peek mode |

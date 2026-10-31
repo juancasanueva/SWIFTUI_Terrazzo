@@ -104,6 +104,7 @@ enum ShortcutPrefix: String, Codable, CaseIterable, Sendable {
 enum ShortcutAction: String, CaseIterable, Codable, Sendable {
     case focusLeft, focusRight, focusUp, focusDown
     case swapLeft, swapRight, swapUp, swapDown
+    case resizeLeft, resizeRight, resizeUp, resizeDown
     case makePrimary, nextWindow, previousWindow, nextInTile, previousInTile, tabView, tabViewBackward
     case bigger, smaller, resetSizes
     case float, alwaysFloat, focus, noPeek, cleanSpace, retile
@@ -118,6 +119,10 @@ enum ShortcutAction: String, CaseIterable, Codable, Sendable {
         case .focusRight: (.right, [])
         case .focusUp: (.up, [])
         case .focusDown: (.down, [])
+        case .resizeLeft: (.left, [])
+        case .resizeRight: (.right, [])
+        case .resizeUp: (.up, [])
+        case .resizeDown: (.down, [])
         case .swapLeft: (.left, [])
         case .swapRight: (.right, [])
         case .swapUp: (.up, [])
@@ -160,6 +165,16 @@ enum ShortcutAction: String, CaseIterable, Codable, Sendable {
         switch self {
         case .swapLeft, .swapRight, .swapUp, .swapDown: true
         default: false
+        }
+    }
+
+    var resizeDirection: Direction? {
+        switch self {
+        case .resizeLeft: .left
+        case .resizeRight: .right
+        case .resizeUp: .up
+        case .resizeDown: .down
+        default: nil
         }
     }
 
@@ -213,7 +228,12 @@ struct ShortcutMap: Codable, Equatable, Sendable {
         if let number = action.moveWorkspaceNumber, let key = ShortcutKey(rawValue: "\(number)") {
             return KeyCombo(key: key, modifiers: [.control, .shift])
         }
+        // Replaced by the arrows below; still available to anyone who assigns them keys.
+        if action == .bigger || action == .smaller { return nil }
         let suffix = action.defaultSuffix
+        if action.resizeDirection != nil {
+            return KeyCombo(key: suffix.key, modifiers: [.control, .option])
+        }
         // Moving goes with directional focus: same arrows and modifier, plus Shift, whatever the prefix.
         if action.isSwap {
             return KeyCombo(key: suffix.key, modifiers: [.control, .shift])

@@ -607,6 +607,104 @@ struct TilingStateTests {
         #expect(shrunk == [.minimumSize])
     }
 
+    private func width(_ state: TilingState, _ id: WindowID) -> CGFloat? {
+        peek(state, context()).placements.first { $0.id == id }?.frame.width
+    }
+
+    private func height(_ state: TilingState, _ id: WindowID) -> CGFloat? {
+        peek(state, context()).placements.first { $0.id == id }?.frame.height
+    }
+
+    @Test func rightGrowsAWindowWithANeighborOnTheRight() {
+        var state = filled([1, 2])
+        let notices = state.nudge(1, direction: .right, context: context())
+        #expect(notices.isEmpty)
+        #expect(width(state, 1) == 1056)
+        #expect(width(state, 2) == 864)
+    }
+
+    @Test func leftShrinksAWindowWithANeighborOnTheRightOnly() {
+        var state = filled([1, 2])
+        _ = state.nudge(1, direction: .left, context: context())
+        #expect(width(state, 1) == 864)
+        #expect(width(state, 2) == 1056)
+    }
+
+    @Test func rightShrinksTheRightmostWindowFromItsLeftEdge() {
+        var state = filled([1, 2])
+        _ = state.nudge(2, direction: .right, context: context())
+        #expect(width(state, 2) == 864)
+        #expect(width(state, 1) == 1056)
+    }
+
+    @Test func leftGrowsTheRightmostWindow() {
+        var state = filled([1, 2])
+        _ = state.nudge(2, direction: .left, context: context())
+        #expect(width(state, 2) == 1056)
+    }
+
+    @Test func downMovesTheEdgeBetweenStackedCells() {
+        var state = filled([1, 2, 3])
+        _ = state.nudge(2, direction: .down, context: context())
+        #expect(height(state, 2) == 594)
+        #expect(height(state, 3) == 486)
+        #expect(height(state, 1) == 1080)
+    }
+
+    @Test func upOnTheTopCellMovesItsLowerEdgeUp() {
+        var state = filled([1, 2, 3])
+        _ = state.nudge(2, direction: .up, context: context())
+        #expect(height(state, 2) == 486)
+    }
+
+    @Test func aMiddleWindowMovesOnlyTheEdgeInThatDirection() {
+        var ctx = context()
+        ctx.policy.kind = .columns
+        ctx.policy.kindIsChosen = true
+        var state = filled([1, 2, 3], context: ctx)
+        _ = state.nudge(2, direction: .right, context: ctx)
+        let frames = peek(state, ctx).placements
+        #expect(frames.first { $0.id == 1 }?.frame.width == 640)
+        #expect(frames.first { $0.id == 2 }?.frame.width == 736)
+        #expect(frames.first { $0.id == 3 }?.frame.width == 544)
+    }
+
+    @Test func aWindowWithNoNeighborsReportsTheLimit() {
+        var state = filled([1])
+        #expect(state.nudge(1, direction: .right, context: context()) == [.maximumSize])
+        #expect(state.nudge(1, direction: .up, context: context()) == [.maximumSize])
+        #expect(!state.hasCustomSizes(on: left))
+    }
+
+    @Test func noRoomLeftReportsTheLimitInsteadOfMovingTheOtherEdge() {
+        var ctx = context()
+        ctx.policy.kind = .columns
+        ctx.policy.kindIsChosen = true
+        var state = filled([1, 2, 3], context: ctx)
+        var notices: [Notice] = []
+        for _ in 0..<40 { notices = state.nudge(2, direction: .right, context: ctx) }
+        #expect(notices == [.maximumSize])
+        #expect(peek(state, ctx).placements.first { $0.id == 1 }?.frame.width == 640)
+    }
+
+    @Test func shrinkingToTheFloorReportsTheMinimum() {
+        var state = filled([1, 2])
+        var notices: [Notice] = []
+        for _ in 0..<40 { notices = state.nudge(1, direction: .left, context: context()) }
+        #expect(notices == [.minimumSize])
+    }
+
+    @Test func nudgeDoesNothingInFocusModeOrCleanSpace() {
+        var zoomed = filled([1, 2])
+        zoomed.toggleZoom(1, context: context())
+        #expect(zoomed.nudge(1, direction: .right, context: context()).isEmpty)
+        #expect(!zoomed.hasCustomSizes(on: left))
+        var clean = filled([1, 2])
+        clean.toggleClean(on: left, active: 1)
+        #expect(clean.nudge(1, direction: .right, context: context()).isEmpty)
+        #expect(!clean.hasCustomSizes(on: left))
+    }
+
     @Test func removedWindowLeavesNoFloatOrZoomResidue() {
         var state = filled([1, 2])
         state.toggleZoom(1, context: context())

@@ -95,6 +95,25 @@ struct ConfigTests {
         #expect(map.combo(for: .tile5)?.symbols == "⌃⌥⌘5")
     }
 
+    @Test func resizeUsesControlOptionArrowsWhateverThePrefix() {
+        var map = ShortcutMap()
+        #expect(map.combo(for: .resizeLeft)?.symbols == "⌃⌥←")
+        #expect(map.combo(for: .resizeRight)?.symbols == "⌃⌥→")
+        #expect(map.combo(for: .resizeUp)?.symbols == "⌃⌥↑")
+        #expect(map.combo(for: .resizeDown)?.symbols == "⌃⌥↓")
+        map.prefix = .controlShift
+        #expect(map.combo(for: .resizeLeft)?.symbols == "⌃⌥←")
+    }
+
+    @Test func biggerAndSmallerHaveNoKeysUntilAssigned() {
+        var map = ShortcutMap()
+        #expect(map.combo(for: .bigger) == nil)
+        #expect(map.combo(for: .smaller) == nil)
+        map.bindings[ShortcutAction.bigger.rawValue] = "ctrl+opt+="
+        #expect(map.combo(for: .bigger)?.string == "ctrl+opt+=")
+        #expect(map.combo(for: .resetSizes)?.symbols == "⌃⌥0")
+    }
+
     @Test func directionalFocusDefaultsToControlArrowsWhateverThePrefix() {
         var map = ShortcutMap()
         #expect(map.combo(for: .focusLeft)?.symbols == "⌃←")

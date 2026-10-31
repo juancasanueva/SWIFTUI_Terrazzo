@@ -241,6 +241,10 @@ extension ShortcutAction {
         if let number = workspaceNumber { return "Switch to workspace \(number)" }
         if let number = moveWorkspaceNumber { return "Move window to workspace \(number)" }
         return switch self {
+        case .resizeLeft: "Move a window edge left"
+        case .resizeRight: "Move a window edge right"
+        case .resizeUp: "Move a window edge up"
+        case .resizeDown: "Move a window edge down"
         case .focusLeft: "Focus the window on the left"
         case .focusRight: "Focus the window on the right"
         case .focusUp: "Focus the window above"

@@ -847,6 +847,13 @@ final class AppController {
             moveFocusedWindow(toWorkspace: number)
             return
         }
+        if let direction = action.resizeDirection {
+            guard let id = shownFocusedWindow(), let key = state.key(of: id) else { return }
+            show(state.nudge(id, direction: direction, context: context()))
+            saveScreenPreferences(key)
+            apply()
+            return
+        }
         if let direction = action.focusDirection {
             // Tab View uses the same keys to move its selection while it is open.
             if tabView.isOpen {

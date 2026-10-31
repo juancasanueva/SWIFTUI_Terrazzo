@@ -706,6 +706,47 @@ struct TilingState: Equatable {
         return []
     }
 
+    /// Moves one edge of the window in a direction: the edge on that side when there is a neighbor
+    /// there, else the opposite edge, so the window shrinks. Only that edge moves.
+    mutating func nudge(_ id: WindowID, direction: Direction, context: TilingContext) -> [Notice] {
+        guard let key = key(of: id), let workspace = workspaces[key], workspace.zoomed == nil,
+            workspace.cleanSet == nil,
+            let slot = workspace.tiles.firstIndex(where: { $0.windows.contains(id) }),
+            let area = area(of: key, context: context)
+        else { return [] }
+        let frames = slotFrames(on: key, context: context)
+        guard let frame = frames[safe: slot] else { return [] }
+        let others = frames.enumerated().filter { $0.offset != slot }.map(\.element)
+        let opposite: Direction
+        switch direction {
+        case .left: opposite = .right
+        case .right: opposite = .left
+        case .up: opposite = .down
+        case .down: opposite = .up
+        }
+        let hasNeighbor = Self.neighbor(of: frame, in: others, direction: direction) != nil
+        guard hasNeighbor || Self.neighbor(of: frame, in: others, direction: opposite) != nil else {
+            return [.maximumSize]
+        }
+        let dx = area.width * LayoutEngine.stepFraction
+        let dy = area.height * LayoutEngine.stepFraction
+        var deltas = EdgeDeltas()
+        switch (direction, hasNeighbor) {
+        case (.right, true): deltas.maxX = dx
+        case (.right, false): deltas.minX = dx
+        case (.left, true): deltas.minX = -dx
+        case (.left, false): deltas.maxX = -dx
+        case (.down, true): deltas.maxY = dy
+        case (.down, false): deltas.minY = dy
+        case (.up, true): deltas.minY = -dy
+        case (.up, false): deltas.maxY = -dy
+        }
+        guard dragEdges(of: id, deltas: deltas, context: context) else {
+            return [hasNeighbor ? .maximumSize : .minimumSize]
+        }
+        return []
+    }
+
     private mutating func withResizeTarget<Result>(
         _ id: WindowID, context: TilingContext,
         body: (inout TilingState, WorkspaceKey, Int, CGRect, LayoutKind, Int, [Int: CGSize]) -> Result
