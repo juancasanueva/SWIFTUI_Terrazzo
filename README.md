@@ -1,115 +1,179 @@
 # Tiling
 
-A macOS tiling window manager, modelled on the behavior of [the reference app]: windows take a place when they open, the rest reflow when one closes, and extra windows stack in the tile you're using. Requires macOS 15 or later and Accessibility access. It is not sandboxed, because Accessibility control of other apps' windows does not work in the sandbox.
+A tiling window manager for macOS. Windows take a place when they open, the rest fill the space when one closes, and extra windows stack in the tile you're using. There's a menu-bar panel and a Settings window, and everything is also a plain file in `~/.config/tiling/`.
 
-## Config files
+Its behavior is modelled on [the reference app], with numbered workspaces and a command line inspired by [AeroSpace](https://github.com/nikitabobko/AeroSpace). It is an independent project, not affiliated with either.
 
-Everything lives in plain JSON in `~/.config/tiling/` (or `$XDG_CONFIG_HOME/tiling/`):
+## Requirements
 
-| File | Holds |
-| --- | --- |
-| `settings.json` | Layout defaults, spacing, screen edges, highlight, No peek, Clean Space background, appearance, language, login item |
-| `shortcuts.json` | Prefix, master switch, and the shortcuts you changed |
-| `apps.json` | Apps that are never tiled, and the minimum sizes learned per app |
-| `screens.json` | Layout, window count and dragged sizes per screen and Space |
-| `run/state.json` | Workspaces for the command line, written by the app. Numbers, monitor positions and app names |
-| `layout.json` | Where windows are, written by the app so a restart can put them back. Window numbers and app identifiers only, never titles |
+- macOS 15 or later
+- Accessibility access, granted in System Settings → Privacy & Security → Accessibility
+- Xcode, to build it
 
-The app writes these when you change something in its interface, and reloads them within a moment when you edit them by hand. Keys you leave out take their default. If a file can't be parsed, the app keeps its last good values, tells you which file has the error, and refuses to overwrite it until you fix it.
+The app isn't sandboxed, because controlling other apps' windows doesn't work in the sandbox. It isn't notarized and has no auto-update. It makes no network connections, takes no screenshots and saves no window titles.
 
-```json
-{ "gap": 12, "layout": "side", "mainSize": "twoThirds", "windowsPerScreen": 4 }
+## Build and run
+
+Open `tiling.xcodeproj` in Xcode and run the `tiling` scheme, or from a terminal:
+
+```sh
+xcodebuild build -scheme tiling -configuration Release -destination 'platform=macOS' -derivedDataPath build/DerivedData
+open build/DerivedData/Build/Products/Release/tiling.app
 ```
 
-The active window border follows `highlight.cornerRadius`, in points: 16 by default, which is what standard macOS windows measure. Apps that draw their own corners may need another value; it's also in Settings → Highlight.
+The project is signed with its author's team. To build it yourself, set your own team under Signing & Capabilities, or change `DEVELOPMENT_TEAM` in `tiling.xcodeproj/project.xcproj`.
 
-The pointer follows focus, like AeroSpace's `move-mouse`. `movePointer.onWindowFocus` sends it to the center of the focused window when it isn't already over it, and `movePointer.onMonitorChange` sends it to a monitor's center when focus lands on another one, as with an empty workspace. Both are on by default, and they're also in Settings → Highlight.
-
-```json
-{ "movePointer": { "onWindowFocus": true, "onMonitorChange": true } }
-```
-
-The bars above stacked windows have their own settings: `color` as hex, and `hoverDelay`, the seconds the pointer rests on a bar before the panel with the window icons opens, from 0 to 10. Both are also in Settings → Highlight.
-
-```json
-{ "stackBar": { "color": "#3B82F6", "hoverDelay": 2.5 } }
-```
-
-Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` disables one. Action names are the case names of `ShortcutAction` in `tiling/Domain/Shortcuts.swift`.
-
-```json
-{ "prefix": "ctrl+opt", "bindings": { "retile": "ctrl+opt+t", "noPeek": "off" } }
-```
+On first launch a short tour asks for Accessibility access. Nothing moves until its last step, **Tidy My Workspace**.
 
 ## Shortcuts
 
+Every shortcut can be changed or turned off in Settings → Keyboard, or in `shortcuts.json`.
+
 | Keys | Action |
 | --- | --- |
-| ⌃ ←→↑↓ | Focus the window in that direction, or the next screen. macOS uses these keys for Mission Control and Spaces by default; turn those off in System Settings → Keyboard → Keyboard Shortcuts → Mission Control |
-| ⌃⇧ ←→↑↓ | Swap with the neighbor, or move to the next screen |
+| ⌃ ←→↑↓ | Focus the window in that direction, or the next monitor |
+| ⌃⇧ ←→↑↓ | Swap with the neighbor, or move to the next monitor |
+| ⌃⌥ ←→↑↓ | Resize: move the window's edge that way |
+| ⌃⌥0 | Reset sizes on this screen |
 | ⌃ 1–9 | Switch to that workspace |
 | ⌃⇧ 1–9 | Move the active window to that workspace |
+| ⌃N ⌃⇧N | Next / previous window in this stack |
+| ⌃⇥ ⌃⇧⇥ | Tab View: every window, by screen. Hold ⌃, then release to switch |
+| ⌃⌥] ⌃⌥[ | Activate the next / previous window on this screen |
 | ⌃⌥↩ | Make the active window primary |
-| ⌃⌥] ⌃⌥[ | Activate next / previous window |
-| ⌃N ⌃⇧N | Next / previous window in this tile |
-| ⌃⇥ ⌃⇧⇥ | Tab View |
-| ⌃⌥ ←→↑↓ | Resize: move the window's edge that way. The edge on that side if it has a neighbor there, otherwise the opposite edge, so the window shrinks. Each press moves `resizeStep` percent of the screen: 5 by default, from 0.5 to 25, in `settings.json` or Settings → Layout |
-| ⌃⌥0 | Reset sizes |
 | ⌃T | Float the active window, or tile it again |
 | ⌃⌥⇧F | Always float this app |
-| ⌃F | Focus mode |
-| ⌃⌥D | No peek mode |
-| ⌃⌥P | Clean Space |
+| ⌃F | Focus mode: fill the screen, or put it back |
+| ⌃⌥D | No peek mode: fade everything but the active window |
+| ⌃⌥P | Clean Space: put the active window on a plain background |
 | ⌃⌥R | Retile |
-| ⌃⌥⌘1–5 | Windows on this screen |
+| ⌃⌥⌘1–5 | Number of windows on this screen |
 
-⌘-drag a window to swap, ⌥⌘-drag to add it to a stack, drag to another screen to move it, and drag a shared edge to resize.
+Shortcuts follow a key's physical position, and they apply in every app while Tiling runs.
 
-## Workspaces
+**Conflicts to expect:**
 
-There are nine numbered workspaces, separate from macOS Spaces, working like AeroSpace's: each display shows one, and a workspace not showing keeps its windows parked in a corner of the screen. Pressing a number goes to that workspace wherever it is. Floating and excluded apps' windows stay visible on every workspace. Parked windows come back when the app quits or tiling is paused, and return to their workspace on the next launch.
+- macOS uses ⌃ + arrows for Mission Control and for switching Spaces, and takes them first. Turn those off in System Settings → Keyboard → Keyboard Shortcuts → Mission Control.
+- ⌃⇥ is how browsers and many apps switch tabs.
+- ⌃F, ⌃N and ⌃T move the cursor or swap characters in shells and Mac text fields.
 
-## Restarts
+### Mouse
 
-Restarting the app puts windows back: tiles, stacks, floats, and each window's workspace. macOS gives a window a new number when it is reopened, so windows are not remembered across quitting their app or restarting the Mac. Focus mode and Clean Space end with the app.
+| Action | Result |
+| --- | --- |
+| ⌘-drag a window onto another | Swap them |
+| ⌥⌘-drag a window onto a tile | Add it to that stack |
+| Drag a window to another screen | Move it there, if there's room |
+| Drag a shared edge | Resize both sides |
+| Click a bar above a stacked window | Show that window |
+| Rest the pointer on the bar | Open quick actions and window icons |
 
-To keep workspaces on particular monitors, map numbers to part of a monitor's name in `settings.json`, or use Settings → Layout → Workspace displays. A workspace always shows on its monitor while that monitor is connected, and otherwise comes to the focused one.
+## How it works
+
+- **Layouts:** Grid, Columns, Rows and Side, with variations for ultrawide and vertical monitors. Each screen keeps its own layout, window count and sizes.
+- **Stacks:** when a screen is full, a new window stacks on the tile you're working in. Focus a window first to choose which tile, or set "When a screen is full" to float new windows instead.
+- **Minimum sizes:** an app that refuses to shrink has its minimum learned, and split lines move to make room. If it still doesn't fit, it stacks or floats. Settings → Apps lists these and can forget them.
+- **Excluded apps:** untick the app's switch in the menu-bar panel to leave its windows where you put them.
+- **Pointer:** the pointer follows focus to the window or monitor you moved to, unless it's already there. Both rules can be turned off.
+- **Restarts:** restarting Tiling puts windows back in their tiles, stacks and workspaces. macOS gives a window a new number when it's reopened, so this doesn't cover quitting those apps or restarting the Mac.
+
+### Workspaces
+
+There are nine numbered workspaces, separate from macOS Spaces. Each monitor shows one, and the others keep their windows parked in a screen corner, where macOS leaves a small sliver visible. Parked windows come back when Tiling quits or is paused. Floating windows and excluded apps stay visible on every workspace.
+
+## Configuration
+
+Settings are plain JSON in `~/.config/tiling/`, or `$XDG_CONFIG_HOME/tiling/`. Edits apply within a moment, and keys you leave out take their default. If a file can't be parsed, Tiling keeps its last good values, tells you which file has the error, and won't overwrite it until you fix it.
+
+| File | Holds |
+| --- | --- |
+| `settings.json` | Layout, spacing, appearance and behavior |
+| `shortcuts.json` | The shortcuts you changed |
+| `apps.json` | Apps that are never tiled, and learned minimum sizes |
+| `screens.json` | Layout, window count and sizes per screen and workspace |
+| `layout.json` | Where windows are, written by the app. Window numbers and app identifiers |
+| `run/state.json` | Workspaces for the command line, written by the app. Numbers, monitor positions and app names |
+
+### `settings.json`
 
 ```json
-{ "workspaceDisplays": { "1": "LG", "2": "LG", "7": "Odyssey", "8": "Odyssey" } }
+{
+  "layout": "side",
+  "windowsPerScreen": 4,
+  "mainSize": "twoThirds",
+  "gap": 12,
+  "resizeStep": 2,
+  "whenFull": "floatInMiddle",
+  "movingIntoFull": "stackOnTop",
+  "highlight": { "style": "activeBorder", "color": "#FF9500", "width": 3, "cornerRadius": 16 },
+  "stackBar": { "color": "#3B82F6", "hoverDelay": 2.5 },
+  "movePointer": { "onWindowFocus": true, "onMonitorChange": true },
+  "noPeek": { "dim": 50, "blur": true },
+  "workspaceDisplays": { "1": "LG", "2": "LG", "7": "Odyssey" },
+  "screenEdges": { "top": 50, "left": 0, "bottom": 0, "right": 0 },
+  "onWorkspaceChange": ["/opt/homebrew/bin/sketchybar", "--trigger", "workspace_change", "FOCUSED_WORKSPACE={workspace}"]
+}
 ```
+
+| Key | Meaning |
+| --- | --- |
+| `layout` | `grid`, `columns`, `rows` or `side`. Unset means Grid, or Rows on vertical monitors |
+| `windowsPerScreen` | Default number of tiles per screen, 1 to 5 |
+| `mainSize` | `half`, `sixty` or `twoThirds` |
+| `gap` | Space between windows, in points |
+| `resizeStep` | Percent of the screen moved by one resize press, 0.5 to 25 |
+| `whenFull` | `stack` or `floatInMiddle` |
+| `movingIntoFull` | `swap` or `stackOnTop` |
+| `highlight.style` | `none`, `activeBorder`, `allBorders` or `glow` |
+| `highlight.cornerRadius` | Corner radius of the windows being outlined. Standard windows measure about 16 |
+| `stackBar.hoverDelay` | Seconds resting on a bar before the panel opens, 0 to 10 |
+| `workspaceDisplays` | Workspace number to part of a monitor's name. It shows there while that monitor is connected |
+| `screenEdges` | Space to keep clear on every screen, for bars from other apps. `screenEdgesByDisplay` does it for one display, by its UUID |
+| `onWorkspaceChange` | A program and arguments to run when workspaces change. It runs without a shell, and `{workspace}` becomes the current number |
+
+The rest of the settings are in `tiling/Domain/AppSettings.swift`.
+
+### `shortcuts.json`
+
+Keys are `ctrl`, `opt`, `shift` and `cmd` joined with `+`, and `off` disables a shortcut. Action names are the cases of `ShortcutAction` in `tiling/Domain/Shortcuts.swift`.
+
+```json
+{ "prefix": "ctrl+opt", "bindings": { "retile": "ctrl+opt+t", "noPeek": "off", "tabView": "cmd+e" } }
+```
+
+`prefix` applies to the shortcuts that start with ⌃⌥ in the table above, other than resizing and always-float's own Shift. It can be `ctrl+opt`, `opt+cmd` or `ctrl+shift`. Shortcuts you set yourself don't change with it.
 
 ## Command line
 
-The app's binary answers questions and takes commands, so bars such as SketchyBar can show workspaces. Arguments follow AeroSpace's where they overlap, so scripts written for it only need to call a different program.
+The app's binary answers questions and takes commands, so bars such as [SketchyBar](https://github.com/FelixKratz/SketchyBar) can show workspaces. Arguments match AeroSpace's where they overlap, so scripts written for it only need to call a different program.
 
 ```sh
-tiling list-workspaces --all
-tiling list-workspaces --focused
-tiling list-workspaces --monitor all --format '%{workspace} %{monitor-appkit-nsscreen-screens-id}'
-tiling list-windows --workspace 3 --format '%{app-name}'
-tiling workspace 3
+TILING=build/DerivedData/Build/Products/Release/tiling.app/Contents/MacOS/tiling
+
+$TILING list-workspaces --all
+$TILING list-workspaces --focused
+$TILING list-workspaces --monitor all --format '%{workspace} %{monitor-appkit-nsscreen-screens-id}'
+$TILING list-windows --workspace 3 --format '%{app-name}'
+$TILING workspace 3
 ```
 
-To be told when workspaces change, set a program and arguments in `settings.json`. It runs directly, without a shell, and `{workspace}` becomes the focused number:
+Floating windows and excluded apps belong to no workspace, so they aren't listed. Combine this with `onWorkspaceChange` to refresh a bar when workspaces change.
 
-```json
-{ "onWorkspaceChange": ["/opt/homebrew/bin/sketchybar", "--trigger", "aerospace_workspace_change", "FOCUSED_WORKSPACE={workspace}"] }
-```
-
-Windows that float, and apps excluded from tiling, belong to no workspace and aren't listed.
-
-## Layout of the code
-
-- `tiling/Domain`: pure layout, workspace state and config logic, covered by unit tests.
-- `tiling/Adapters`: Accessibility, displays and Spaces, global hotkeys, config file watching.
-- `tiling/App`: the controller that connects the domain to the system, and pointer tracking.
-- `tiling/UI`: overlays, menu-bar panel, settings, Tab View and tour.
-
-`_AXUIElementGetWindow` and SkyLight's Space functions are private macOS API with no public equivalent. Space support degrades to one Space if the SkyLight functions disappear.
-
-## Tests
+## Development
 
 ```sh
 xcodebuild test -scheme tiling -only-testing:tilingTests -destination 'platform=macOS'
 ```
+
+| Folder | Contents |
+| --- | --- |
+| `tiling/Domain` | Layout, workspace state, shortcuts and config. Pure logic, covered by unit tests |
+| `tiling/Adapters` | Accessibility, displays and Spaces, global hotkeys, config file watching |
+| `tiling/App` | The controller connecting the domain to the system, pointer tracking, the command line |
+| `tiling/UI` | Overlays, menu-bar panel, Settings, Tab View and tour |
+
+`_AXUIElementGetWindow` and SkyLight's Space functions are private macOS API with no public equivalent, so a macOS update could affect them. If the SkyLight functions disappear, Spaces are treated as one Space.
+
+## License
+
+[MIT](LICENSE)
