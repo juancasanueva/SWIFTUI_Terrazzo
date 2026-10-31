@@ -2941,18 +2941,18 @@
         }
       }
     },
-    "Open a window and Tiling gives it a place.": {
+    "Open a window and Terrazzo gives it a place.": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Abre una ventana y Tiling le da un lugar."
+            "value": "Abre una ventana y Terrazzo le da un lugar."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウインドウを開くと、Tiling が場所を用意します。"
+            "value": "ウインドウを開くと、Terrazzo が場所を用意します。"
           }
         },
         "ko": {
@@ -2964,7 +2964,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打开窗口,Tiling 会为它安排位置。"
+            "value": "打开窗口,Terrazzo 会为它安排位置。"
           }
         }
       }
@@ -3137,30 +3137,30 @@
         }
       }
     },
-    "Quit Tiling": {
+    "Quit Terrazzo": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Salir de Tiling"
+            "value": "Salir de Terrazzo"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tiling を終了"
+            "value": "Terrazzo を終了"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tiling 종료"
+            "value": "Terrazzo 종료"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出 Tiling"
+            "value": "退出 Terrazzo"
           }
         }
       }
@@ -3977,6 +3977,62 @@
         }
       }
     },
+    "Terrazzo needs Accessibility access to arrange windows": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terrazzo necesita acceso de Accesibilidad para organizar ventanas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウインドウを配置するには Terrazzo にアクセシビリティへのアクセスが必要です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiling이 윈도우를 정렬하려면 손쉬운 사용 접근이 필요합니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terrazzo 需要辅助功能访问权限才能排列窗口"
+          }
+        }
+      }
+    },
+    "Terrazzo uses it only to read and set the position and size of windows. It takes no screenshots, reads no document contents and saves no window titles.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terrazzo lo usa solo para leer y fijar la posición y el tamaño de las ventanas. No hace capturas, no lee el contenido de documentos ni guarda títulos de ventanas."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terrazzo はウインドウの位置とサイズの読み取りと設定にのみ使用します。スクリーンショットの撮影、書類内容の読み取り、ウインドウタイトルの保存は行いません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiling은 윈도우의 위치와 크기를 읽고 설정하는 데만 사용합니다. 스크린샷을 찍거나 문서 내용을 읽거나 윈도우 제목을 저장하지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terrazzo 仅用它读取和设置窗口的位置与大小。它不截屏、不读取文稿内容,也不保存窗口标题。"
+          }
+        }
+      }
+    },
     "There isn't enough room for %@ on that screen.": {
       "localizations": {
         "es": {
@@ -4369,62 +4425,6 @@
         }
       }
     },
-    "Tiling needs Accessibility access to arrange windows": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiling necesita acceso de Accesibilidad para organizar ventanas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウインドウを配置するには Tiling にアクセシビリティへのアクセスが必要です"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiling이 윈도우를 정렬하려면 손쉬운 사용 접근이 필요합니다"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiling 需要辅助功能访问权限才能排列窗口"
-          }
-        }
-      }
-    },
-    "Tiling uses it only to read and set the position and size of windows. It takes no screenshots, reads no document contents and saves no window titles.": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiling lo usa solo para leer y fijar la posición y el tamaño de las ventanas. No hace capturas, no lee el contenido de documentos ni guarda títulos de ventanas."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiling はウインドウの位置とサイズの読み取りと設定にのみ使用します。スクリーンショットの撮影、書類内容の読み取り、ウインドウタイトルの保存は行いません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiling은 윈도우의 위치와 크기를 읽고 설정하는 데만 사용합니다. 스크린샷을 찍거나 문서 내용을 읽거나 윈도우 제목을 저장하지 않습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiling 仅用它读取和设置窗口的位置与大小。它不截屏、不读取文稿内容,也不保存窗口标题。"
-          }
-        }
-      }
-    },
     "Top": {
       "localizations": {
         "es": {
@@ -4509,30 +4509,30 @@
         }
       }
     },
-    "Use Tiling": {
+    "Use Terrazzo": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usar Tiling"
+            "value": "Usar Terrazzo"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tiling を使う"
+            "value": "Terrazzo を使う"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tiling 사용"
+            "value": "Terrazzo 사용"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用 Tiling"
+            "value": "使用 Terrazzo"
           }
         }
       }
@@ -4593,18 +4593,18 @@
         }
       }
     },
-    "Welcome to Tiling": {
+    "Welcome to Terrazzo": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Te damos la bienvenida a Tiling"
+            "value": "Te damos la bienvenida a Terrazzo"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tiling へようこそ"
+            "value": "Terrazzo へようこそ"
           }
         },
         "ko": {
@@ -4616,7 +4616,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "欢迎使用 Tiling"
+            "value": "欢迎使用 Terrazzo"
           }
         }
       }
@@ -4873,18 +4873,18 @@
         }
       }
     },
-    "macOS couldn't set up Tiling's keyboard shortcuts. Quit and reopen Tiling.": {
+    "macOS couldn't set up Terrazzo's keyboard shortcuts. Quit and reopen Terrazzo.": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS no pudo configurar los atajos de Tiling. Sal y vuelve a abrir Tiling."
+            "value": "macOS no pudo configurar los atajos de Terrazzo. Sal y vuelve a abrir Terrazzo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS は Tiling のショートカットを設定できませんでした。Tiling を終了して開き直してください。"
+            "value": "macOS は Terrazzo のショートカットを設定できませんでした。Terrazzo を終了して開き直してください。"
           }
         },
         "ko": {
@@ -4896,7 +4896,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS 无法设置 Tiling 的键盘快捷键。请退出并重新打开 Tiling。"
+            "value": "macOS 无法设置 Terrazzo 的键盘快捷键。请退出并重新打开 Terrazzo。"
           }
         }
       }

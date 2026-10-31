@@ -1,15 +1,15 @@
 import Foundation
 
 enum ConfigDirectory {
-    /// `$XDG_CONFIG_HOME/tiling`, or `~/.config/tiling`.
+    /// `$XDG_CONFIG_HOME/terrazzo`, or `~/.config/terrazzo`.
     static func url(
         home: URL = FileManager.default.homeDirectoryForCurrentUser,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> URL {
         if let xdg = environment["XDG_CONFIG_HOME"], !xdg.isEmpty {
-            return URL(fileURLWithPath: xdg).appendingPathComponent("tiling")
+            return URL(fileURLWithPath: xdg).appendingPathComponent("terrazzo")
         }
-        return home.appendingPathComponent(".config/tiling")
+        return home.appendingPathComponent(".config/terrazzo")
     }
 }
 

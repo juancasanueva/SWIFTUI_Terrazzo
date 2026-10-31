@@ -176,11 +176,16 @@ final class AppController {
         terminationSource = source
 
         DistributedNotificationCenter.default().addObserver(
-            forName: TilingCommandLine.switchNotification, object: nil, queue: .main
+            forName: TerrazzoCommandLine.switchNotification, object: nil, queue: .main
         ) { [weak self] note in
             if let text = note.object as? String, let number = Int(text), VirtualWorkspaces.numbers.contains(number) {
                 self?.switchToWorkspace(number)
             }
+        }
+
+        // A moved or renamed app loses its login item, so bring it back if it's meant to be on.
+        if settings.setupFinished, settings.openAtLogin, SMAppService.mainApp.status != .enabled {
+            applyLoginItem()
         }
 
         restoreLayout()
@@ -320,7 +325,7 @@ final class AppController {
         guard report != lastPublishedReport else { return }
         lastPublishedReport = report
         if let data = try? JSONEncoder().encode(report) {
-            let url = TilingCommandLine.reportURL
+            let url = TerrazzoCommandLine.reportURL
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? data.write(to: url, options: .atomic)
         }
@@ -334,7 +339,7 @@ final class AppController {
     }
 
     private func runWorkspaceHook(focused: Int?) {
-        let arguments = TilingCommand.hookArguments(settings.onWorkspaceChange, focused: focused)
+        let arguments = TerrazzoCommand.hookArguments(settings.onWorkspaceChange, focused: focused)
         guard let program = arguments.first else { return }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: program)

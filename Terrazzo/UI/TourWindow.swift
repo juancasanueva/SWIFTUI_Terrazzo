@@ -8,7 +8,7 @@ enum TourWindow {
         // A closed tour starts over; one still open keeps its place.
         if window?.isVisible != true {
             let created = NSWindow(contentViewController: NSHostingController(rootView: TourView(controller: controller)))
-            created.title = String(localized: "Welcome to Tiling")
+            created.title = String(localized: "Welcome to Terrazzo")
             created.styleMask = [.titled, .closable]
             created.isReleasedWhenClosed = false
             created.center()
@@ -67,10 +67,10 @@ private struct TourView: View {
         VStack(spacing: 16) {
             Image(nsImage: AppIconRenderer.image(for: controller.settings.iconStyle))
                 .resizable().frame(width: 96, height: 96)
-            Text("Open a window and Tiling gives it a place.").font(.title2.weight(.semibold))
+            Text("Open a window and Terrazzo gives it a place.").font(.title2.weight(.semibold))
             Text("When a window closes, the others fill the space. When the screen is full, new windows stack in the tile you're using.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Button("Use Tiling") { step = controller.isTrusted ? 2 : 1 }
+            Button("Use Terrazzo") { step = controller.isTrusted ? 2 : 1 }
                 .keyboardShortcut(.defaultAction)
         }
     }
@@ -80,7 +80,7 @@ private struct TourView: View {
             Image(systemName: controller.isTrusted ? "checkmark.circle.fill" : "lock.shield")
                 .font(.system(size: 48)).foregroundStyle(controller.isTrusted ? .green : .orange)
             Text("Allow Accessibility access").font(.title2.weight(.semibold))
-            Text("Tiling uses it only to read and set the position and size of windows. It takes no screenshots, reads no document contents and saves no window titles.")
+            Text("Terrazzo uses it only to read and set the position and size of windows. It takes no screenshots, reads no document contents and saves no window titles.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary)
             if !controller.isTrusted {
                 Button("Grant Access") {

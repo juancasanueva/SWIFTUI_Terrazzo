@@ -32,7 +32,7 @@ struct WorkspaceReport: Codable, Equatable, Sendable {
 
 /// The command line. Arguments follow AeroSpace's where they overlap, so scripts written for it
 /// only need to call a different program.
-enum TilingCommand: Equatable {
+enum TerrazzoCommand: Equatable {
     enum Selection: Equatable {
         case all, focused
         case monitor(Int?)
@@ -48,13 +48,13 @@ enum TilingCommand: Equatable {
 
     static let usage = """
         usage:
-          tiling list-workspaces (--all | --focused | --monitor <n|all>) [--format <text>]
-          tiling list-windows --workspace <1-9> [--format <text>]
-          tiling workspace <1-9>
+          terrazzo list-workspaces (--all | --focused | --monitor <n|all>) [--format <text>]
+          terrazzo list-windows --workspace <1-9> [--format <text>]
+          terrazzo workspace <1-9>
         """
 
     /// Nil when the arguments aren't a command, which means start the app.
-    static func parse(_ arguments: [String]) -> Result<TilingCommand, UsageError>? {
+    static func parse(_ arguments: [String]) -> Result<TerrazzoCommand, UsageError>? {
         // Options starting with a dash come from macOS or Xcode when launching the app.
         guard let name = arguments.first, !name.hasPrefix("-") else { return nil }
         guard ["list-workspaces", "list-windows", "workspace"].contains(name) else { return .failure(error()) }
@@ -73,7 +73,7 @@ enum TilingCommand: Equatable {
         }
     }
 
-    private static func parseListWorkspaces(_ rest: [String]) -> Result<TilingCommand, UsageError> {
+    private static func parseListWorkspaces(_ rest: [String]) -> Result<TerrazzoCommand, UsageError> {
         var values = rest
         var selection: Selection?
         for flag in ["--all", "--focused"] {

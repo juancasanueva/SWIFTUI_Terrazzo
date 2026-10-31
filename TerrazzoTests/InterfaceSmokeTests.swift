@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import SwiftUI
 import Testing
-@testable import tiling
+@testable import Terrazzo
 
 /// Lays out the interface with a controller that was never started, so no real window is touched.
 @MainActor

@@ -1,6 +1,6 @@
 import CoreGraphics
 import Testing
-@testable import tiling
+@testable import Terrazzo
 
 @MainActor
 struct LayoutEngineTests {

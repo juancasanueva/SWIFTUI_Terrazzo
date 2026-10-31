@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import tiling
+@testable import Terrazzo
 
 @MainActor
 struct ConfigTests {
@@ -12,12 +12,12 @@ struct ConfigTests {
 
     @Test func directoryPrefersXDGAndFallsBackToDotConfig() {
         let home = URL(fileURLWithPath: "/Users/me")
-        #expect(ConfigDirectory.url(home: home, environment: [:]).path == "/Users/me/.config/tiling")
+        #expect(ConfigDirectory.url(home: home, environment: [:]).path == "/Users/me/.config/terrazzo")
         #expect(
-            ConfigDirectory.url(home: home, environment: ["XDG_CONFIG_HOME": "/x"]).path == "/x/tiling")
+            ConfigDirectory.url(home: home, environment: ["XDG_CONFIG_HOME": "/x"]).path == "/x/terrazzo")
         #expect(
             ConfigDirectory.url(home: home, environment: ["XDG_CONFIG_HOME": ""]).path
-                == "/Users/me/.config/tiling")
+                == "/Users/me/.config/terrazzo")
     }
 
     @Test func theBorderHugsARoundedWindow() {

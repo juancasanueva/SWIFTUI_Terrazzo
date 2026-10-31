@@ -207,7 +207,7 @@ enum ShortcutConflict: Equatable, Sendable {
     case system
 }
 
-/// `~/.config/tiling/shortcuts.json`. Only keys the user changed are stored in `bindings`.
+/// `~/.config/terrazzo/shortcuts.json`. Only keys the user changed are stored in `bindings`.
 struct ShortcutMap: Codable, Equatable, Sendable {
     static let off = "off"
 

@@ -490,7 +490,7 @@ private struct AboutSettings: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Tiling", value: version)
+                LabeledContent("Terrazzo", value: version)
                 LabeledContent("Config folder", value: ConfigDirectory.url().path)
                 Button("Open Config Folder") { NSWorkspace.shared.open(ConfigDirectory.url()) }
             }
@@ -506,7 +506,7 @@ private struct AboutSettings: View {
     }
 
     private func report() -> String {
-        var lines = ["Tiling \(version)", ProcessInfo.processInfo.operatingSystemVersionString]
+        var lines = ["Terrazzo \(version)", ProcessInfo.processInfo.operatingSystemVersionString]
         if includeDiagnostics {
             let displays = Displays.current()
             lines.append("Displays: \(displays.map { "\(Int($0.frame.width))x\(Int($0.frame.height))" }.joined(separator: ", "))")

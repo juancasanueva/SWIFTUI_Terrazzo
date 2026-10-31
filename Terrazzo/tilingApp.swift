@@ -21,12 +21,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 enum Entry {
     static func main() {
-        guard !TilingCommandLine.runIfCommand() else { return }
-        TilingApp.main()
+        guard !TerrazzoCommandLine.runIfCommand() else { return }
+        TerrazzoApp.main()
     }
 }
 
-struct TilingApp: App {
+struct TerrazzoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     private let controller = AppController.shared
 

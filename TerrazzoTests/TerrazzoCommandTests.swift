@@ -1,9 +1,9 @@
 import Foundation
 import Testing
-@testable import tiling
+@testable import Terrazzo
 
 @MainActor
-struct TilingCommandTests {
+struct TerrazzoCommandTests {
     private let report = WorkspaceReport(
         focused: 3,
         workspaces: [
@@ -13,18 +13,18 @@ struct TilingCommandTests {
         ])
 
     private func output(_ arguments: [String]) throws -> [String] {
-        let parsed = try #require(TilingCommand.parse(arguments))
+        let parsed = try #require(TerrazzoCommand.parse(arguments))
         return try parsed.get().output(from: report)
     }
 
     @Test func noArgumentsStartsTheApp() {
-        #expect(TilingCommand.parse([]) == nil)
-        #expect(TilingCommand.parse(["-NSDocumentRevisionsDebugMode", "YES"]) == nil)
+        #expect(TerrazzoCommand.parse([]) == nil)
+        #expect(TerrazzoCommand.parse(["-NSDocumentRevisionsDebugMode", "YES"]) == nil)
     }
 
     @Test func anUnknownWordIsAnErrorRatherThanStartingTheApp() throws {
-        let parsed = try #require(TilingCommand.parse(["nonsense"]))
-        #expect(throws: TilingCommand.UsageError.self) { try parsed.get() }
+        let parsed = try #require(TerrazzoCommand.parse(["nonsense"]))
+        #expect(throws: TerrazzoCommand.UsageError.self) { try parsed.get() }
     }
 
     @Test func listsAllWorkspaces() throws {
@@ -36,7 +36,7 @@ struct TilingCommandTests {
     }
 
     @Test func noFocusedWorkspacePrintsNothing() throws {
-        let parsed = try #require(TilingCommand.parse(["list-workspaces", "--focused"]))
+        let parsed = try #require(TerrazzoCommand.parse(["list-workspaces", "--focused"]))
         #expect(try parsed.get().output(from: WorkspaceReport()) == [])
     }
 
@@ -65,7 +65,7 @@ struct TilingCommandTests {
     }
 
     @Test func parsesSwitching() throws {
-        let parsed = try #require(TilingCommand.parse(["workspace", "4"]))
+        let parsed = try #require(TerrazzoCommand.parse(["workspace", "4"]))
         #expect(try parsed.get() == .switchTo(4))
     }
 
@@ -75,8 +75,8 @@ struct TilingCommandTests {
         ["list-windows", "--workspace", "x"], ["list-windows", "--format", "%{app-name}"],
     ])
     func badArgumentsAreErrors(arguments: [String]) throws {
-        let parsed = try #require(TilingCommand.parse(arguments))
-        #expect(throws: TilingCommand.UsageError.self) { try parsed.get() }
+        let parsed = try #require(TerrazzoCommand.parse(arguments))
+        #expect(throws: TerrazzoCommand.UsageError.self) { try parsed.get() }
     }
 
     @Test func reportRoundTripsThroughJSON() throws {
@@ -87,10 +87,10 @@ struct TilingCommandTests {
     @Test func theHookReplacesTheWorkspaceNumber() {
         let hook = ["/bin/x", "--trigger", "change", "FOCUSED_WORKSPACE={workspace}"]
         #expect(
-            TilingCommand.hookArguments(hook, focused: 3) == ["/bin/x", "--trigger", "change", "FOCUSED_WORKSPACE=3"])
+            TerrazzoCommand.hookArguments(hook, focused: 3) == ["/bin/x", "--trigger", "change", "FOCUSED_WORKSPACE=3"])
         #expect(
-            TilingCommand.hookArguments(hook, focused: nil) == ["/bin/x", "--trigger", "change", "FOCUSED_WORKSPACE="])
-        #expect(TilingCommand.hookArguments([], focused: 1).isEmpty)
+            TerrazzoCommand.hookArguments(hook, focused: nil) == ["/bin/x", "--trigger", "change", "FOCUSED_WORKSPACE="])
+        #expect(TerrazzoCommand.hookArguments([], focused: 1).isEmpty)
     }
 
     @Test func theHookDefaultsToNothing() {

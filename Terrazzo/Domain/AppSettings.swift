@@ -24,7 +24,7 @@ struct ScreenEdges: Codable, Equatable, Sendable {
     var right: CGFloat = 0
 }
 
-/// `~/.config/tiling/settings.json`
+/// `~/.config/terrazzo/settings.json`
 struct AppSettings: Codable, Equatable, Sendable {
     struct NoPeek: Codable, Equatable, Sendable {
         var dim: Double = 50
@@ -108,7 +108,7 @@ extension AppSettings {
     }
 }
 
-/// `~/.config/tiling/apps.json`
+/// `~/.config/terrazzo/apps.json`
 struct AppRules: Codable, Equatable, Sendable {
     static let defaultExcluded = [
         "com.apple.calculator", "com.apple.Stickies", "com.apple.systempreferences",
@@ -121,7 +121,7 @@ struct AppRules: Codable, Equatable, Sendable {
     var learnedMinimums: [String: CGSize] = [:]
 }
 
-/// `~/.config/tiling/screens.json`, one entry per screen and Space.
+/// `~/.config/terrazzo/screens.json`, one entry per screen and Space.
 struct ScreenPreferences: Codable, Equatable, Sendable {
     var kind: LayoutKind?
     var count: Int?

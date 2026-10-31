@@ -35,7 +35,7 @@ struct MenuBarIcon: View {
         let configuration = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         let symbol = NSImage(
             systemSymbolName: filled ? "rectangle.split.2x2.fill" : "rectangle.split.2x2",
-            accessibilityDescription: "Tiling")?.withSymbolConfiguration(configuration)
+            accessibilityDescription: "Terrazzo")?.withSymbolConfiguration(configuration)
         let size = NSSize(width: workspace == nil ? 22 : 34, height: 18)
         let image = NSImage(size: size, flipped: false) { _ in
             if let symbol {
@@ -121,7 +121,7 @@ struct MenuPanelView: View {
     @ViewBuilder
     private var cards: some View {
         if controller.status == .needsAccess {
-            card("Tiling needs Accessibility access to arrange windows", button: "Grant Access") {
+            card("Terrazzo needs Accessibility access to arrange windows", button: "Grant Access") {
                 AXWindowSystem.requestTrust()
                 if let url = URL(
                     string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
@@ -136,7 +136,7 @@ struct MenuPanelView: View {
             card("Another app turned on Secure Input. Shortcuts are paused until it ends.")
         }
         if controller.hotKeysFailed {
-            card("macOS couldn't set up Tiling's keyboard shortcuts. Quit and reopen Tiling.")
+            card("macOS couldn't set up Terrazzo's keyboard shortcuts. Quit and reopen Terrazzo.")
         }
         if let error = controller.configError {
             card("\(error) has an error. Keeping the last good values.")
@@ -291,7 +291,7 @@ struct MenuPanelView: View {
                         NSApp.activate()
                     })
             Spacer()
-            Button("Quit Tiling") { NSApp.terminate(nil) }
+            Button("Quit Terrazzo") { NSApp.terminate(nil) }
         }
         .controlSize(.small)
     }

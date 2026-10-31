@@ -1,4 +1,4 @@
-/// `~/.config/tiling/layout.json`: where windows were, so a restart of this app puts them back.
+/// `~/.config/terrazzo/layout.json`: where windows were, so a restart of this app puts them back.
 /// Holds window numbers and app identifiers only, never titles. Window numbers last as long as the
 /// window, so this does not survive quitting those apps or restarting the Mac.
 struct SavedLayout: Codable, Equatable, Sendable {

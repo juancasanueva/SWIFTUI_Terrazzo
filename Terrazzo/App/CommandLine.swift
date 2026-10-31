@@ -1,8 +1,8 @@
 import AppKit
 
 /// Runs when the program is called with a command instead of being opened as the app.
-enum TilingCommandLine {
-    static let switchNotification = Notification.Name("com.juancasanueva.tiling.workspace")
+enum TerrazzoCommandLine {
+    static let switchNotification = Notification.Name("com.juancasanueva.terrazzo.workspace")
 
     static var reportURL: URL {
         ConfigDirectory.url().appendingPathComponent("run/state.json")
@@ -10,15 +10,15 @@ enum TilingCommandLine {
 
     /// Returns false when the arguments aren't a command, so the app should start.
     static func runIfCommand() -> Bool {
-        guard let parsed = TilingCommand.parse(Array(CommandLine.arguments.dropFirst())) else { return false }
+        guard let parsed = TerrazzoCommand.parse(Array(CommandLine.arguments.dropFirst())) else { return false }
         switch parsed {
         case .failure(let error):
             fail(error.message, code: 2)
         case .success(.switchTo(let number)):
             let others = NSRunningApplication.runningApplications(
-                withBundleIdentifier: Bundle.main.bundleIdentifier ?? "com.juancasanueva.tiling")
+                withBundleIdentifier: Bundle.main.bundleIdentifier ?? "com.juancasanueva.terrazzo")
                 .filter { $0.processIdentifier != getpid() }
-            guard !others.isEmpty else { fail("Tiling isn't running.", code: 1) }
+            guard !others.isEmpty else { fail("Terrazzo isn't running.", code: 1) }
             DistributedNotificationCenter.default().postNotificationName(
                 switchNotification, object: String(number), userInfo: nil, deliverImmediately: true)
         case .success(let command):
