@@ -186,6 +186,31 @@ struct TilingStateTests {
         #expect(tiles(state)[2] == [3, 4])
     }
 
+    @Test func cyclingFollowsTheFixedOrderOfTheBar() {
+        var state = filled([1, 2, 3])
+        _ = state.reconcile(snapshot([1, 2, 3], focused: 3), context: context())
+        _ = state.reconcile(snapshot([1, 2, 3, 4]), context: context())
+        _ = state.reconcile(snapshot([1, 2, 3, 4, 5]), context: context())
+        #expect(tiles(state)[2] == [5, 4, 3])
+        var shown = state.cycleStack(of: 5, forward: true)
+        #expect(shown == 4)
+        shown = state.cycleStack(of: 4, forward: true)
+        #expect(shown == 3)
+        shown = state.cycleStack(of: 3, forward: true)
+        #expect(shown == 5)
+        shown = state.cycleStack(of: 5, forward: false)
+        #expect(shown == 3)
+    }
+
+    @Test func cyclingKeepsMostRecentUseForWhatClosesNext() {
+        var state = filled([1, 2, 3])
+        _ = state.reconcile(snapshot([1, 2, 3], focused: 3), context: context())
+        _ = state.reconcile(snapshot([1, 2, 3, 4]), context: context())
+        _ = state.reconcile(snapshot([1, 2, 3, 4, 5]), context: context())
+        _ = state.cycleStack(of: 5, forward: true)
+        #expect(tiles(state)[2] == [4, 5, 3])
+    }
+
     @Test func movingAChipLeavesTheOldTileShowingItsNextWindow() {
         var state = filled([1, 2, 3])
         _ = state.reconcile(snapshot([1, 2, 3], focused: 3), context: context())

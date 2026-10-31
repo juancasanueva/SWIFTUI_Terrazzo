@@ -88,6 +88,9 @@ enum Notice: Equatable, Sendable {
 struct Tile: Equatable, Sendable {
     /// The showing window first, then the rest by most recent use.
     var windows: [WindowID]
+
+    /// A fixed order for showing the stack, newest first, so windows keep their place as they take turns.
+    var barOrder: [WindowID] { windows.sorted(by: >) }
 }
 
 struct Workspace: Equatable, Sendable {
@@ -579,14 +582,14 @@ struct TilingState: Equatable {
             workspace.tiles[index].windows.count > 1
         else { return nil }
         var windows = workspace.tiles[index].windows
-        if forward {
-            windows.append(windows.removeFirst())
-        } else {
-            windows.insert(windows.removeLast(), at: 0)
-        }
+        let order = workspace.tiles[index].barOrder
+        guard let position = order.firstIndex(of: windows[0]) else { return nil }
+        let next = order[(position + (forward ? 1 : -1) + order.count) % order.count]
+        windows.removeAll { $0 == next }
+        windows.insert(next, at: 0)
         workspace.tiles[index].windows = windows
         workspaces[key] = workspace
-        return windows[0]
+        return next
     }
 
     mutating func show(_ id: WindowID) {

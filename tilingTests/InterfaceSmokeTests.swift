@@ -70,4 +70,20 @@ struct GripMetricsTests {
             #expect(active.height == GripMetrics.hitHeight)
         }
     }
+
+    @Test func segmentsKeepTheirPlaceAndOnlyTheLongOneMoves() {
+        let first = GripMetrics.segments(of: [4, 3])
+        #expect(first.map(\.id) == [4, 3])
+        #expect(first.map(\.width) == [GripMetrics.showingWidth, GripMetrics.waitingWidth])
+
+        let afterSwitching = GripMetrics.segments(of: [3, 4])
+        #expect(afterSwitching.map(\.id) == [4, 3])
+        #expect(afterSwitching.map(\.width) == [GripMetrics.waitingWidth, GripMetrics.showingWidth])
+        #expect(afterSwitching.map(\.isShowing) == [false, true])
+    }
+
+    @Test func theMostRecentlyUsedOrderDoesNotMoveSegments() {
+        #expect(GripMetrics.segments(of: [3, 5, 4]).map(\.id) == [5, 4, 3])
+        #expect(GripMetrics.segments(of: [4, 3, 5]).map(\.id) == [5, 4, 3])
+    }
 }

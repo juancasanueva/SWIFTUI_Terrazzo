@@ -20,6 +20,21 @@ enum GripMetrics {
     static let spacing: CGFloat = 4
     private static let sidePadding: CGFloat = 8
 
+    struct Segment: Equatable {
+        var id: WindowID
+        var isShowing: Bool
+        var width: CGFloat
+    }
+
+    /// One segment per window, each keeping its place; only the long one moves. `windows` is the tile's
+    /// list, with the showing window first.
+    static func segments(of windows: [WindowID]) -> [Segment] {
+        Tile(windows: windows).barOrder.map { id in
+            let isShowing = id == windows.first
+            return Segment(id: id, isShowing: isShowing, width: isShowing ? showingWidth : waitingWidth)
+        }
+    }
+
     static func collapsedSize(count: Int, isActive: Bool) -> CGSize {
         let others = CGFloat(max(count - 1, 0))
         let content =
@@ -106,22 +121,22 @@ private struct GripView: View {
 
     private var segments: some View {
         HStack(spacing: GripMetrics.spacing) {
-            ForEach(Array(model.windows.enumerated()), id: \.element) { index, id in
+            ForEach(GripMetrics.segments(of: model.windows), id: \.id) { segment in
                 Button {
-                    controller.showWindow(id)
+                    controller.showWindow(segment.id)
                 } label: {
                     if model.isActive {
                         Capsule()
-                            .fill(Color.orange.opacity(index == 0 ? 1 : 0.6))
+                            .fill(Color.orange.opacity(segment.isShowing ? 1 : 0.6))
                             .frame(
-                                width: index == 0 ? GripMetrics.showingWidth : GripMetrics.waitingWidth,
+                                width: segment.width,
                                 height: GripMetrics.barHeight
                             )
                             .frame(height: GripMetrics.hitHeight)
                             .contentShape(Rectangle())
                     } else {
                         Circle()
-                            .fill(Color.orange.opacity(index == 0 ? 1 : 0.55))
+                            .fill(Color.orange.opacity(segment.isShowing ? 1 : 0.55))
                             .frame(width: GripMetrics.dotSize, height: GripMetrics.dotSize)
                             .frame(width: GripMetrics.dotTarget, height: GripMetrics.hitHeight)
                             .contentShape(Rectangle())
@@ -169,7 +184,7 @@ private struct HoverBar: View {
                 action("chevron.left", "Previous window") { cycle(forward: false) }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
-                        ForEach(windows, id: \.self) { id in
+                        ForEach(Tile(windows: windows).barOrder, id: \.self) { id in
                             WindowChip(id: id, isShowing: id == active, controller: controller)
                         }
                     }
