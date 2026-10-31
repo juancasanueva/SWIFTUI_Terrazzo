@@ -46,6 +46,11 @@ struct InterfaceSmokeTests {
         }
     }
 
+    @Test func theSpanishPerAppSwitchSaysWhatItDoes() {
+        let spanish = Bundle(for: AppController.self).path(forResource: "es", ofType: "lproj").flatMap(Bundle.init(path:))
+        #expect(spanish?.localizedString(forKey: "Tile %@", value: nil, table: nil) == "Incluir %@ en el mosaico")
+    }
+
     @Test func aStringCatalogEntryExistsForTheStatusText() {
         let spanish = Bundle(for: AppController.self).path(forResource: "es", ofType: "lproj").flatMap(Bundle.init(path:))
         #expect(spanish?.localizedString(forKey: "This Space is full", value: nil, table: nil) == "Este Espacio está lleno")
