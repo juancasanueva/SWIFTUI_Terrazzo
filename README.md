@@ -10,7 +10,15 @@ Its numbered workspaces and command line are inspired by [AeroSpace](https://git
 - Accessibility access, granted in System Settings → Privacy & Security → Accessibility
 - Xcode, to build it
 
-The app isn't sandboxed, because controlling other apps' windows doesn't work in the sandbox. It isn't notarized and has no auto-update. It makes no network connections, takes no screenshots and saves no window titles.
+The app isn't sandboxed, because controlling other apps' windows doesn't work in the sandbox. Releases are notarized. It takes no screenshots and saves no window titles. Its only network connection is to look for updates, which happens when you choose **Check for Updates…** or turn on automatic checks in Settings → About; automatic checks start off.
+
+## Install
+
+```sh
+brew install --cask juancasanueva/tap/terrazzo
+```
+
+Or download the latest zip from [Releases](https://github.com/juancasanueva/SWIFTUI_Terrazzo/releases/latest). Releases are Apple silicon only. See [RELEASING.md](RELEASING.md) for how a version is published.
 
 ## Build and run
 
@@ -111,6 +119,7 @@ Settings are plain JSON in `~/.config/terrazzo/`, or `$XDG_CONFIG_HOME/terrazzo/
   "noPeek": { "dim": 50, "blur": true },
   "workspaceDisplays": { "1": "LG", "2": "LG", "7": "Odyssey" },
   "screenEdges": { "top": 50, "left": 0, "bottom": 0, "right": 0 },
+  "automaticUpdateChecks": false,
   "onWorkspaceChange": ["/opt/homebrew/bin/sketchybar", "--trigger", "workspace_change", "FOCUSED_WORKSPACE={workspace}"]
 }
 ```
