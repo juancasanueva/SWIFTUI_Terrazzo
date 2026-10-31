@@ -69,7 +69,12 @@ final class AXWindowSystem {
     private func records(of app: NSRunningApplication) -> [WindowRecord] {
         let element = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(element, Self.messagingTimeout)
-        guard let windows: [AXUIElement] = Self.attribute(element, kAXWindowsAttribute) else { return [] }
+        var list: CFTypeRef?
+        let status = AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &list)
+        // A busy app is not an app with no windows: keep what is known until it answers.
+        if status == .cannotComplete { return cache[app.processIdentifier] ?? [] }
+        guard let windows = list as? [AXUIElement] else { return [] }
+        let known = cache[app.processIdentifier] ?? []
         let bundleID = app.bundleIdentifier ?? "pid.\(app.processIdentifier)"
         let appName = app.localizedName ?? bundleID
         return windows.compactMap { window in
@@ -77,7 +82,9 @@ final class AXWindowSystem {
             AXUIElementSetMessagingTimeout(window, Self.messagingTimeout)
             var id: CGWindowID = 0
             guard axElementGetWindow(window, &id) == .success, id != 0 else { return nil }
-            guard let frame = Self.frame(of: window) else { return nil }
+            guard let frame = Self.frame(of: window) ?? known.first(where: { $0.id == id })?.frame else {
+                return nil
+            }
             let isMinimized = (Self.attribute(window, kAXMinimizedAttribute) as Bool?) ?? false
             observeDestruction(of: window, id: id, pid: app.processIdentifier)
             return WindowRecord(

@@ -381,9 +381,14 @@ final class AppController {
         }
         let snapshot = Snapshot(
             windows: windows, minimized: records.filter(\.isMinimized).map(\.id), focused: focused,
-            focusedApp: NSWorkspace.shared.frontmostApplication?.bundleIdentifier, existing: Self.existingWindows())
+            focusedApp: focusedOtherApp(), existing: Self.existingWindows())
         show(state.reconcile(snapshot, context: context))
         apply(context: context)
+    }
+
+    private func focusedOtherApp() -> String? {
+        let app = NSWorkspace.shared.frontmostApplication
+        return app?.processIdentifier == getpid() ? nil : app?.bundleIdentifier
     }
 
     /// Window numbers on every Space, hidden or not. Uses numbers only.

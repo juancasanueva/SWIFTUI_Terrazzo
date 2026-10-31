@@ -262,10 +262,12 @@ struct TilingState: Equatable {
         _ id: WindowID, app: String?, activeKeys: Set<WorkspaceKey>, context: TilingContext
     ) {
         guard let key = key(of: id), var workspace = workspaces[key] else {
-            // A floating or excluded window was clicked. A dialog of the zoomed app is not "another window".
+            // A floating or excluded window was clicked. A dialog of the zoomed app is not "another window",
+            // and neither is this app's own interface, which arrives with no app name.
             guard let app else { return }
+            let isFloat = userFloats.contains(id)
             for active in activeKeys {
-                if let zoomed = workspaces[active]?.zoomed, apps[zoomed] != app {
+                if let zoomed = workspaces[active]?.zoomed, isFloat || apps[zoomed] != app {
                     workspaces[active]?.zoomed = nil
                 }
             }

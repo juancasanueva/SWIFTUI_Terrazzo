@@ -436,6 +436,16 @@ struct TilingStateTests {
         #expect(state.workspaces[left]?.zoomed == nil)
     }
 
+    @Test func aFloatedWindowOfTheZoomedAppEndsFocusMode() {
+        var state = filled([1, 2, 3])
+        state.toggleFloat(3, context: context())
+        state.toggleZoom(1, context: context())
+        var snap = snapshot([1, 2, 3], focused: 3)
+        snap.focusedApp = "app"
+        _ = state.reconcile(snap, context: context())
+        #expect(state.workspaces[left]?.zoomed == nil)
+    }
+
     @Test func aDialogOfTheZoomedAppKeepsFocusMode() {
         var state = filled([1, 2])
         state.toggleZoom(1, context: context())
