@@ -96,6 +96,7 @@ final class AppController {
     @ObservationIgnored private var terminationSource: DispatchSourceSignal?
     @ObservationIgnored private var pendingPids: Set<pid_t> = []
     @ObservationIgnored private var followUps: Set<pid_t> = []
+    @ObservationIgnored private var lastActiveApp: pid_t?
     @ObservationIgnored private var suspectedMinimums: [WindowID: CGSize] = [:]
     @ObservationIgnored private var pendingAll = false
     @ObservationIgnored private var refreshScheduled = false
@@ -454,6 +455,7 @@ final class AppController {
             focusedApp: focusedOtherApp(), existing: Self.existingWindows())
         show(state.reconcile(snapshot, context: context))
         apply(context: context)
+        restoreStacksIfTheActiveAppChanged(context: context)
         if let display = pendingShownFocus {
             pendingShownFocus = nil
             focusShowingWindow(on: visibleKey(display))
@@ -463,6 +465,27 @@ final class AppController {
     private func focusedOtherApp() -> String? {
         let app = NSWorkspace.shared.frontmostApplication
         return app?.processIdentifier == getpid() ? nil : app?.bundleIdentifier
+    }
+
+    private func restoreStacksIfTheActiveAppChanged(context: TilingContext) {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return }
+        let pid = app.processIdentifier
+        guard pid != lastActiveApp else { return }
+        lastActiveApp = pid
+        raiseCoveredStacks(appName: app.bundleIdentifier ?? "pid.\(pid)", context: context)
+        // The app may still be bringing its windows forward.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self, self.isOperating else { return }
+            self.raiseCoveredStacks(appName: app.bundleIdentifier ?? "pid.\(pid)", context: self.context())
+        }
+    }
+
+    private func raiseCoveredStacks(appName: String, context: TilingContext) {
+        let covered = state.showingWindowsCovered(byApp: appName, on: context.screens.map(\.key))
+        guard !covered.isEmpty else { return }
+        covered.forEach(ax.raise)
+        // Raising can take the keyboard within an app, so the focused window goes last.
+        if let focused = state.focused { ax.raise(focused) }
     }
 
     /// Window numbers on every Space, hidden or not. Uses numbers only.

@@ -592,6 +592,19 @@ struct TilingState: Equatable {
         return next
     }
 
+    /// Showing windows that macOS just covered: activating an app brings all its windows forward,
+    /// including one waiting behind another app's window in a stack.
+    func showingWindowsCovered(byApp app: String, on keys: [WorkspaceKey]) -> [WindowID] {
+        keys.flatMap { key -> [WindowID] in
+            (workspaces[key]?.tiles ?? []).compactMap { tile in
+                guard let shown = tile.windows.first, apps[shown] != app,
+                    tile.windows.dropFirst().contains(where: { apps[$0] == app })
+                else { return nil }
+                return shown
+            }
+        }
+    }
+
     mutating func show(_ id: WindowID) {
         guard let key = key(of: id), var workspace = workspaces[key],
             let index = workspace.tiles.firstIndex(where: { $0.windows.contains(id) })

@@ -211,6 +211,37 @@ struct TilingStateTests {
         #expect(tiles(state)[2] == [4, 5, 3])
     }
 
+    private func twoAppStack() -> TilingState {
+        var state = TilingState()
+        let ctx = context(policy: { var p = TilingPolicy(gap: 0); p.count = 2; return p }())
+        func window(_ id: WindowID, _ app: String) -> ObservedWindow {
+            ObservedWindow(id: id, app: app, key: left, frame: .zero)
+        }
+        state.reconcile(Snapshot(windows: [window(1, "b")], minimized: [], focused: 1), context: ctx)
+        state.reconcile(Snapshot(windows: [window(1, "b"), window(2, "b")], minimized: [], focused: 1), context: ctx)
+        state.reconcile(
+            Snapshot(windows: [window(1, "b"), window(2, "b"), window(3, "a")], minimized: [], focused: 3), context: ctx)
+        return state
+    }
+
+    @Test func aStackIsCoveredWhenTheAppOfAWaitingWindowBecomesActive() {
+        let state = twoAppStack()
+        #expect(state.workspaces[left]?.tiles.map(\.windows) == [[3, 1], [2]])
+        #expect(state.showingWindowsCovered(byApp: "b", on: [left]) == [3])
+    }
+
+    @Test func aStackIsNotCoveredByAnAppWithoutAWaitingWindowThere() {
+        #expect(twoAppStack().showingWindowsCovered(byApp: "c", on: [left]).isEmpty)
+    }
+
+    @Test func theShowingWindowsOwnAppDoesNotCoverIt() {
+        #expect(twoAppStack().showingWindowsCovered(byApp: "a", on: [left]).isEmpty)
+    }
+
+    @Test func screensNotShowingAreLeftAlone() {
+        #expect(twoAppStack().showingWindowsCovered(byApp: "b", on: []).isEmpty)
+    }
+
     @Test func movingAChipLeavesTheOldTileShowingItsNextWindow() {
         var state = filled([1, 2, 3])
         _ = state.reconcile(snapshot([1, 2, 3], focused: 3), context: context())
