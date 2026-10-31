@@ -32,6 +32,7 @@ final class AppController {
     @ObservationIgnored private lazy var layoutFile = ConfigFile(
         url: directory.appendingPathComponent("layout.json"), defaults: SavedLayout())
     @ObservationIgnored private var lastSavedLayout: SavedLayout?
+    @ObservationIgnored private var lastPublishedReport: WorkspaceReport?
     @ObservationIgnored private var layoutSaveScheduled = false
     @ObservationIgnored private let watcher = ConfigWatcher()
     @ObservationIgnored private var isLoadingConfig = false
@@ -172,6 +173,14 @@ final class AppController {
         source.resume()
         terminationSource = source
 
+        DistributedNotificationCenter.default().addObserver(
+            forName: TilingCommandLine.switchNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            if let text = note.object as? String, let number = Int(text), VirtualWorkspaces.numbers.contains(number) {
+                self?.switchToWorkspace(number)
+            }
+        }
+
         restoreLayout()
         syncWorkspaces()
         applyAppearance()
@@ -291,6 +300,46 @@ final class AppController {
             owners[id] = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "pid.\(pid)"
         }
         return owners
+    }
+
+    /// Tells the command line and other tools how workspaces stand, when that has changed.
+    private func publishWorkspaces(displays: [DisplayInfo]) {
+        var appsByNumber: [Int: [String]] = [:]
+        for (key, workspace) in state.workspaces
+        where displays.contains(where: { $0.uuid == key.display })
+            && key.space == spaces.activeSpace(ofDisplay: key.display) {
+            let ids = workspace.tiles.flatMap(\.windows) + workspace.overflow
+            appsByNumber[key.virtual, default: []] += ids.compactMap(appName)
+        }
+        let focusedKey = state.focused.flatMap { state.key(of: $0) }.flatMap { isShown($0) ? $0 : nil }
+        let report = WorkspaceReport.build(
+            map: workspaceMap, displays: displays.map(\.uuid), focused: (focusedKey ?? pointerKey())?.virtual,
+            appsByNumber: appsByNumber)
+        guard report != lastPublishedReport else { return }
+        lastPublishedReport = report
+        if let data = try? JSONEncoder().encode(report) {
+            let url = TilingCommandLine.reportURL
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url, options: .atomic)
+        }
+        runWorkspaceHook(focused: report.focused)
+    }
+
+    private func appName(_ id: WindowID) -> String? {
+        if let record = ax.record(id) { return record.appName }
+        guard let bundle = state.apps[id] else { return nil }
+        return NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first?.localizedName ?? bundle
+    }
+
+    private func runWorkspaceHook(focused: Int?) {
+        let arguments = TilingCommand.hookArguments(settings.onWorkspaceChange, focused: focused)
+        guard let program = arguments.first else { return }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: program)
+        process.arguments = Array(arguments.dropFirst())
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
     }
 
     private func scheduleLayoutSave() {
@@ -748,6 +797,7 @@ final class AppController {
         updateOverlays(context: context)
         revision &+= 1
         scheduleLayoutSave()
+        publishWorkspaces(displays: Displays.current())
         return moved
     }
 

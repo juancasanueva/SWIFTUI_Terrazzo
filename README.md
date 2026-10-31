@@ -12,6 +12,7 @@ Everything lives in plain JSON in `~/.config/tiling/` (or `$XDG_CONFIG_HOME/tili
 | `shortcuts.json` | Prefix, master switch, and the shortcuts you changed |
 | `apps.json` | Apps that are never tiled, and the minimum sizes learned per app |
 | `screens.json` | Layout, window count and dragged sizes per screen and Space |
+| `run/state.json` | Workspaces for the command line, written by the app. Numbers, monitor positions and app names |
 | `layout.json` | Where windows are, written by the app so a restart can put them back. Window numbers and app identifiers only, never titles |
 
 The app writes these when you change something in its interface, and reloads them within a moment when you edit them by hand. Keys you leave out take their default. If a file can't be parsed, the app keeps its last good values, tells you which file has the error, and refuses to overwrite it until you fix it.
@@ -71,6 +72,26 @@ To keep workspaces on particular monitors, map numbers to part of a monitor's na
 ```json
 { "workspaceDisplays": { "1": "LG", "2": "LG", "7": "Odyssey", "8": "Odyssey" } }
 ```
+
+## Command line
+
+The app's binary answers questions and takes commands, so bars such as SketchyBar can show workspaces. Arguments follow AeroSpace's where they overlap, so scripts written for it only need to call a different program.
+
+```sh
+tiling list-workspaces --all
+tiling list-workspaces --focused
+tiling list-workspaces --monitor all --format '%{workspace} %{monitor-appkit-nsscreen-screens-id}'
+tiling list-windows --workspace 3 --format '%{app-name}'
+tiling workspace 3
+```
+
+To be told when workspaces change, set a program and arguments in `settings.json`. It runs directly, without a shell, and `{workspace}` becomes the focused number:
+
+```json
+{ "onWorkspaceChange": ["/opt/homebrew/bin/sketchybar", "--trigger", "aerospace_workspace_change", "FOCUSED_WORKSPACE={workspace}"] }
+```
+
+Windows that float, and apps excluded from tiling, belong to no workspace and aren't listed.
 
 ## Layout of the code
 

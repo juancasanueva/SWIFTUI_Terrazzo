@@ -75,6 +75,9 @@ struct AppSettings: Codable, Equatable, Sendable {
     var highlight = Highlight()
     var noPeek = NoPeek()
     var stackBar = StackBar()
+    /// A program and its arguments to run when workspaces change, for bars such as SketchyBar.
+    /// `{workspace}` becomes the focused workspace number. Runs directly, without a shell.
+    var onWorkspaceChange: [String] = []
     var hoverFocus = false
     /// Workspace number to part of a display name, such as `"7": "Odyssey"`. The workspace always
     /// shows on that display while it is connected.

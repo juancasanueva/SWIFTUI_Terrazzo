@@ -19,6 +19,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
+enum Entry {
+    static func main() {
+        guard !TilingCommandLine.runIfCommand() else { return }
+        TilingApp.main()
+    }
+}
+
 struct TilingApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     private let controller = AppController.shared
