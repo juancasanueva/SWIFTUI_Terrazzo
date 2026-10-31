@@ -40,6 +40,88 @@ struct InterfaceSmokeTests {
         #expect(DividerMetrics.hitFrame(of: short) == short.frame)
     }
 
+    private final class DragSpy {
+        var finishes = 0
+        var buttonDown = true
+    }
+
+    private var divider: LayoutDivider {
+        LayoutDivider(slot: 0, movesHorizontally: true, frame: CGRect(x: 100, y: 10, width: 12, height: 500))
+    }
+
+    private func handle(_ spy: DragSpy) -> DividerHandleView {
+        DividerHandleView(
+            id: DividerID(key: WorkspaceKey(display: "D", space: 1), slot: 0, movesHorizontally: true),
+            onMove: { _ in }, onFinish: { spy.finishes += 1 }, isButtonDown: { spy.buttonDown })
+    }
+
+    private func mouseEvent(_ type: NSEvent.EventType) -> NSEvent {
+        NSEvent.mouseEvent(
+            with: type, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+            eventNumber: 0, clickCount: 1, pressure: 1)!
+    }
+
+    private func nextMainQueueTurn() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+    }
+
+    @Test func aDragWhoseReleaseWasMissedStillFinishesOnce() async {
+        let spy = DragSpy()
+        let view = handle(spy)
+        view.mouseDown(with: mouseEvent(.leftMouseDown))
+
+        view.update(divider)
+        await nextMainQueueTurn()
+        #expect(spy.finishes == 0)
+
+        spy.buttonDown = false
+        view.update(divider)
+        await nextMainQueueTurn()
+        #expect(spy.finishes == 1)
+        #expect(!view.isEmphasized)
+
+        view.mouseUp(with: mouseEvent(.leftMouseUp))
+        await nextMainQueueTurn()
+        #expect(spy.finishes == 1)
+    }
+
+    @Test func aNormalReleaseFinishesTheDragOnce() async {
+        let spy = DragSpy()
+        let view = handle(spy)
+        view.mouseDown(with: mouseEvent(.leftMouseDown))
+        spy.buttonDown = false
+        view.mouseUp(with: mouseEvent(.leftMouseUp))
+        await nextMainQueueTurn()
+        #expect(spy.finishes == 1)
+    }
+
+    @Test func aPanelWithNoPlaceDropsItsHover() {
+        let view = handle(DragSpy())
+        let panel = DividerPanel(handle: view)
+        view.mouseEntered(with: mouseEvent(.mouseMoved))
+        #expect(view.isEmphasized)
+
+        panel.show(divider, order: nil)
+
+        #expect(!view.isEmphasized)
+        #expect(!panel.isVisible)
+    }
+
+    @Test func aRemovedPanelFinishesADragInProgress() async {
+        let spy = DragSpy()
+        let view = handle(spy)
+        let panel = DividerPanel(handle: view)
+        view.mouseDown(with: mouseEvent(.leftMouseDown))
+
+        panel.remove()
+        await nextMainQueueTurn()
+
+        #expect(spy.finishes == 1)
+        #expect(!view.isEmphasized)
+    }
+
     @Test func aDividerIsWhite() {
         #expect(DividerMetrics.color == .white)
     }

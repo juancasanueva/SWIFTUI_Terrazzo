@@ -213,7 +213,7 @@ final class OverlayCenter {
             for divider in model.state.dividers(on: screen.key, context: model.context) {
                 let id = divider.id(on: screen.key)
                 seen.insert(id)
-                let panel = dividers[id] ?? DividerPanel(id: id, controller: controller)
+                let panel = dividers[id] ?? DividerPanel(handle: DividerHandleView(id: id, controller: controller))
                 dividers[id] = panel
                 panel.show(
                     divider,

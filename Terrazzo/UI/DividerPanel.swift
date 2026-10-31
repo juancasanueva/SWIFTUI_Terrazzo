@@ -70,8 +70,8 @@ struct DividerDrag: Equatable {
 final class DividerPanel: NSPanel {
     private let handle: DividerHandleView
 
-    init(id: DividerID, controller: AppController) {
-        handle = DividerHandleView(id: id, controller: controller)
+    init(handle: DividerHandleView) {
+        self.handle = handle
         super.init(
             contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isOpaque = false
@@ -93,31 +93,44 @@ final class DividerPanel: NSPanel {
         switch placement {
         case .above(let window): order(.above, relativeTo: Int(window))
         case .below(let window): order(.below, relativeTo: Int(window))
-        case nil: orderOut(nil)
+        case nil: remove()
         }
     }
 
-    /// Going away sends no exit event, so the resize cursor has to be given back here.
     func remove() {
-        handle.releaseCursor()
+        handle.endInteraction()
         orderOut(nil)
     }
 }
 
-private final class DividerHandleView: NSView {
+final class DividerHandleView: NSView {
     private let id: DividerID
-    private weak var controller: AppController?
+    private let onMove: (CGFloat) -> Void
+    private let onFinish: () -> Void
+    private let isButtonDown: () -> Bool
     private let bar = CALayer()
     private var position: CGFloat = 0
     private var isHovering = false
     private var drag: DividerDrag?
 
-    init(id: DividerID, controller: AppController) {
+    init(
+        id: DividerID, onMove: @escaping (CGFloat) -> Void, onFinish: @escaping () -> Void,
+        isButtonDown: @escaping () -> Bool = { NSEvent.pressedMouseButtons & 1 != 0 }
+    ) {
         self.id = id
-        self.controller = controller
+        self.onMove = onMove
+        self.onFinish = onFinish
+        self.isButtonDown = isButtonDown
         super.init(frame: .zero)
         wantsLayer = true
         layer?.addSublayer(bar)
+    }
+
+    convenience init(id: DividerID, controller: AppController) {
+        self.init(
+            id: id,
+            onMove: { [weak controller] position in controller?.moveDivider(id, to: position) },
+            onFinish: { [weak controller] in controller?.finishDividerDrag(id) })
     }
 
     @available(*, unavailable)
@@ -127,25 +140,37 @@ private final class DividerHandleView: NSView {
 
     private var cursor: NSCursor { id.movesHorizontally ? .columnResize : .rowResize }
 
+    var isEmphasized: Bool { isHovering || drag != nil }
+
     /// The panel never becomes key, so the first click has to count.
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { false }
 
     func update(_ divider: LayoutDivider) {
         position = divider.position
-        // A release can be lost when the panel moves away mid-drag; the button state has the last word.
-        if NSEvent.pressedMouseButtons & 1 == 0 { drag = nil }
+        // A release can be lost or still be queued; the button state has the last word.
+        if !isButtonDown() { finishDragLater() }
         // A layout change can move the panel out from under a pointer that never moved.
         if drag == nil, isHovering, let window, !window.frame.contains(NSEvent.mouseLocation) {
-            releaseCursor()
+            endInteraction()
         }
         refresh(animated: false)
     }
 
-    func releaseCursor() {
-        guard isHovering || drag != nil else { return }
+    /// Going away sends no exit or release event, so the drag and the resize cursor are given back here.
+    func endInteraction() {
+        let wasEmphasized = isEmphasized
+        finishDragLater()
         isHovering = false
-        NSCursor.arrow.set()
+        if wasEmphasized { NSCursor.arrow.set() }
+        refresh(animated: false)
+    }
+
+    /// This runs in the middle of laying out the windows, which finishing a drag must not re-enter.
+    private func finishDragLater() {
+        guard drag != nil else { return }
+        drag = nil
+        DispatchQueue.main.async { [onFinish] in onFinish() }
     }
 
     override func layout() {
@@ -188,7 +213,7 @@ private final class DividerHandleView: NSView {
     override func mouseDragged(with event: NSEvent) {
         guard let drag else { return }
         cursor.set()
-        controller?.moveDivider(id, to: drag.position(for: pointerPosition))
+        onMove(drag.position(for: pointerPosition))
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -196,7 +221,7 @@ private final class DividerHandleView: NSView {
         drag = nil
         if !isHovering { NSCursor.arrow.set() }
         refresh(animated: true)
-        controller?.finishDividerDrag(id)
+        onFinish()
     }
 
     private var pointerPosition: CGFloat {
@@ -205,7 +230,7 @@ private final class DividerHandleView: NSView {
     }
 
     private func refresh(animated: Bool) {
-        let appearance = DividerMetrics.appearance(emphasized: isHovering || drag != nil)
+        let appearance = DividerMetrics.appearance(emphasized: isEmphasized)
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.12)
         CATransaction.setDisableActions(!animated)
