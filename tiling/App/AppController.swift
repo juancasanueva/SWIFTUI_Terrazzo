@@ -77,6 +77,7 @@ final class AppController {
     var hotKeysFailed = false
     var state = TilingState()
     var noPeekOn = false
+    var workspaceMap = VirtualWorkspaces()
     var settingsTab = SettingsTab.general
     var isSetupWindowOpen = false
     /// The app in front, for the panel's per-app switch.
@@ -84,6 +85,10 @@ final class AppController {
     /// Bumped after each refresh so the panel preview follows the windows.
     var revision = 0
 
+    /// Windows parked in a corner because their workspace isn't showing.
+    @ObservationIgnored private var hiddenWindows: Set<WindowID> = []
+    @ObservationIgnored private var lastWorkspaceSwitch = Date.distantPast
+    @ObservationIgnored private var terminationSource: DispatchSourceSignal?
     @ObservationIgnored private var pendingPids: Set<pid_t> = []
     @ObservationIgnored private var followUps: Set<pid_t> = []
     @ObservationIgnored private var suspectedMinimums: [WindowID: CGSize] = [:]
@@ -148,6 +153,14 @@ final class AppController {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: refreshAll)
 
+        // A plain `kill` must also bring parked windows back.
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { NSApp.terminate(nil) }
+        source.resume()
+        terminationSource = source
+
+        syncWorkspaces()
         applyAppearance()
         pollSystemState()
         pollTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
@@ -180,7 +193,8 @@ final class AppController {
             hoverFocus.update(enabled: settings.hoverFocus)
             scheduleRefresh(pid: nil)
         } else {
-            // Windows stay where they are.
+            // Windows stay where they are, except parked ones, which would be out of reach.
+            revealHiddenWindows()
             hotKeys.unregisterAll()
             dragTracker.stop()
             hoverFocus.update(enabled: false)
@@ -359,6 +373,9 @@ final class AppController {
         }
 
         let displays = Displays.current()
+        syncWorkspaces()
+        let focused = ax.focusedWindow()
+        followFocusToWorkspace(focused)
         let context = context(displays: displays)
         context.screens.forEach { hydrate($0.key) }
         for key in state.workspaces.keys where state.workspaces[key]?.cleanSet != nil {
@@ -368,13 +385,13 @@ final class AppController {
         let excluded = Set(rules.excluded)
         var windows: [ObservedWindow] = []
         for record in records where record.isTileable && !record.isMinimized && !excluded.contains(record.bundleID) {
+            if isParked(record.id, displays: displays) { continue }
             guard let key = key(for: record, displays: displays) else { continue }
             windows.append(ObservedWindow(id: record.id, app: record.bundleID, key: key, frame: record.frame))
         }
         // Order is opening order: window numbers grow as windows are created.
         windows.sort { $0.id < $1.id }
 
-        let focused = ax.focusedWindow()
         if let focused {
             recentWindows.removeAll { $0 == focused }
             recentWindows.insert(focused, at: 0)
@@ -404,7 +421,123 @@ final class AppController {
         let active = spaces.activeSpace(ofDisplay: display.uuid)
         let windowSpaces = spaces.spaces(ofWindow: record.id)
         if !windowSpaces.isEmpty, active != 0, !windowSpaces.contains(active) { return nil }
-        return WorkspaceKey(display: display.uuid, space: active)
+        return WorkspaceKey(display: display.uuid, space: active, virtual: workspaceMap.number(on: display.uuid))
+    }
+
+    private func visibleKey(_ display: String) -> WorkspaceKey {
+        WorkspaceKey(
+            display: display, space: spaces.activeSpace(ofDisplay: display),
+            virtual: workspaceMap.number(on: display))
+    }
+
+    /// True for windows of a workspace that isn't showing on their current Space and connected display.
+    private func isParked(_ id: WindowID, displays: [DisplayInfo]) -> Bool {
+        guard let stored = state.key(of: id), displays.contains(where: { $0.uuid == stored.display }) else {
+            return false
+        }
+        return stored.space == spaces.activeSpace(ofDisplay: stored.display) && !isShown(stored)
+    }
+
+    func isShown(_ key: WorkspaceKey) -> Bool {
+        key.virtual == workspaceMap.number(on: key.display)
+    }
+
+    func isParked(_ id: WindowID) -> Bool { hiddenWindows.contains(id) }
+
+    private func syncWorkspaces() {
+        var updated = workspaceMap
+        updated.sync(displays: Displays.current().map(\.uuid))
+        if updated != workspaceMap { workspaceMap = updated }
+    }
+
+    /// Cmd-Tab, the Dock or a notification can pick a parked window: go to its workspace. Only a change
+    /// of focus counts, and not right after a switch, when the old window may still report focus.
+    private func followFocusToWorkspace(_ focused: WindowID?) {
+        guard let focused, focused != state.focused, Date().timeIntervalSince(lastWorkspaceSwitch) > 0.7,
+            let key = state.key(of: focused), isParked(focused, displays: Displays.current())
+        else { return }
+        _ = workspaceMap.show(key.virtual, focusedDisplay: key.display, isEmpty: false)
+    }
+
+    // MARK: Workspaces
+
+    func isWorkspaceEmpty(_ number: Int) -> Bool {
+        !state.workspaces.contains { key, workspace in
+            key.virtual == number && (!workspace.tiles.isEmpty || !workspace.overflow.isEmpty)
+        }
+    }
+
+    func switchToWorkspace(_ number: Int) {
+        guard isOperating else { return }
+        syncWorkspaces()
+        guard let focusedDisplay = activeKey()?.display else { return }
+        let display = workspaceMap.show(number, focusedDisplay: focusedDisplay, isEmpty: isWorkspaceEmpty(number))
+        lastWorkspaceSwitch = Date()
+        let key = visibleKey(display)
+        hydrate(key)
+        apply()
+        focusShowingWindow(on: key)
+    }
+
+    func moveFocusedWindow(toWorkspace number: Int) {
+        guard isOperating, let id = shownFocusedWindow(), let source = state.key(of: id) else { return }
+        syncWorkspaces()
+        let display =
+            workspaceMap.display(showing: number)
+            ?? (isWorkspaceEmpty(number) ? nil : workspaceMap.home(of: number))
+            ?? source.display
+        let target = WorkspaceKey(
+            display: display, space: spaces.activeSpace(ofDisplay: display), virtual: number)
+        guard target != source else { return }
+        hydrate(target)
+        workspaceMap.adopt(number, on: display)
+        lastWorkspaceSwitch = Date()
+        _ = state.send(id, to: target, context: context())
+        apply()
+        focusShowingWindow(on: source)
+    }
+
+    /// With nothing to focus, keyboard input must not keep going to a parked window.
+    private func focusShowingWindow(on key: WorkspaceKey) {
+        let workspace = state.workspaces[key]
+        if let id = workspace.flatMap({ $0.tiles[safe: $0.activeTile]?.windows.first ?? $0.tiles.first?.windows.first }) {
+            ax.focus(id)
+            state.focused = id
+            apply()
+        } else {
+            state.focused = nil
+            NSApp.activate()
+        }
+    }
+
+    private func hideWindowsOfOtherWorkspaces(context: TilingContext) {
+        let displays = Displays.current()
+        for (key, workspace) in state.workspaces where !isShown(key) {
+            guard let display = displays.first(where: { $0.uuid == key.display }),
+                key.space == spaces.activeSpace(ofDisplay: key.display)
+            else { continue }
+            let others = displays.filter { $0.uuid != display.uuid }.map(\.frame)
+            for id in state.allWindows(on: key) where !hiddenWindows.contains(id) && !workspace.tiles.isEmpty {
+                guard let frame = ax.currentFrame(of: id) else { continue }
+                ax.move(
+                    id,
+                    to: VirtualWorkspaces.hiddenOrigin(display: display.frame, others: others, windowSize: frame.size))
+                hiddenWindows.insert(id)
+                lastApplied[id] = nil
+            }
+        }
+    }
+
+    /// Puts parked windows back on screen, for when this app stops managing them.
+    func revealHiddenWindows() {
+        let displays = Displays.current()
+        for (index, id) in hiddenWindows.sorted().enumerated() {
+            let home = state.key(of: id).flatMap { key in displays.first { $0.uuid == key.display } } ?? displays.first
+            guard let home else { continue }
+            let offset = CGFloat(index % 8) * 32
+            ax.move(id, to: CGPoint(x: home.visibleFrame.minX + 40 + offset, y: home.visibleFrame.minY + 40 + offset))
+        }
+        hiddenWindows = []
     }
 
     func context(displays: [DisplayInfo] = Displays.current()) -> TilingContext {
@@ -422,7 +555,7 @@ final class AppController {
                 width: display.visibleFrame.width - edges.left - edges.right,
                 height: display.visibleFrame.height - edges.top - edges.bottom)
             return ScreenGeometry(
-                key: WorkspaceKey(display: display.uuid, space: spaces.activeSpace(ofDisplay: display.uuid)),
+                key: visibleKey(display.uuid),
                 area: area)
         }
         return TilingContext(screens: screens, policy: policy, minimumSize: { learned[$0] ?? .zero })
@@ -453,6 +586,8 @@ final class AppController {
         }
 
         for id in plan.centered { center(id, context: context) }
+        for placement in plan.placements { hiddenWindows.remove(placement.id) }
+        hideWindowsOfOtherWorkspaces(context: context)
 
         let showing = Set(plan.showing)
         for id in plan.showing where !lastShowing.contains(id) { ax.raise(id) }
@@ -562,11 +697,19 @@ final class AppController {
             tabView.pressed(backward: action == .tabViewBackward)
             return
         }
+        if let number = action.workspaceNumber {
+            switchToWorkspace(number)
+            return
+        }
+        if let number = action.moveWorkspaceNumber {
+            moveFocusedWindow(toWorkspace: number)
+            return
+        }
         if let direction = action.focusDirection {
             // Tab View uses the same keys to move its selection while it is open.
             if tabView.isOpen {
                 tabView.moveSelection(direction)
-            } else if let id = ax.focusedWindow(),
+            } else if let id = shownFocusedWindow(),
                 let target = state.focusTarget(from: id, direction: direction, context: context()) {
                 showWindow(target)
             }
@@ -600,7 +743,7 @@ final class AppController {
         }
 
         // Everything else acts on a tiled window only.
-        guard let id = ax.focusedWindow(), state.key(of: id) != nil else { return }
+        guard let id = shownFocusedWindow() else { return }
         switch action {
         case .swapLeft: show(state.moveOrSwap(id, direction: .left, context: context))
         case .swapRight: show(state.moveOrSwap(id, direction: .right, context: context))
@@ -700,15 +843,22 @@ final class AppController {
 
     // MARK: Lookups
 
+    /// The focused window, unless it is untracked or parked: after switching to an empty workspace,
+    /// macOS can keep reporting the window that was just hidden.
+    func shownFocusedWindow() -> WindowID? {
+        guard let id = ax.focusedWindow(), let key = state.key(of: id), isShown(key) else { return nil }
+        return id
+    }
+
     func activeKey() -> WorkspaceKey? {
-        if let id = ax.focusedWindow(), let key = state.key(of: id) { return key }
+        if let id = shownFocusedWindow(), let key = state.key(of: id) { return key }
         return pointerKey()
     }
 
     func pointerKey() -> WorkspaceKey? {
         let displays = Displays.current()
         guard let display = Displays.display(containing: Displays.pointerLocation(), in: displays) else { return nil }
-        return WorkspaceKey(display: display.uuid, space: spaces.activeSpace(ofDisplay: display.uuid))
+        return visibleKey(display.uuid)
     }
 
     /// The tiled window on top at a point, using window bounds only.
@@ -726,7 +876,8 @@ final class AppController {
             let layer = (entry[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0
             // Menus, the Dock and other windows above the normal level take the point.
             if layer != 0 { return nil }
-            return state.key(of: number) != nil ? number : nil
+            guard let key = state.key(of: number), isShown(key) else { return nil }
+            return number
         }
         return nil
     }
@@ -834,6 +985,12 @@ final class AppController {
     }
 
     func showWindow(_ id: WindowID) {
+        // Tab View and chips can pick a window from a workspace that isn't showing.
+        if let key = state.key(of: id), !isShown(key) {
+            _ = workspaceMap.show(key.virtual, focusedDisplay: key.display, isEmpty: false)
+            lastWorkspaceSwitch = Date()
+            hydrate(visibleKey(key.display))
+        }
         state.show(id)
         ax.focus(id)
         // Otherwise applying the plan re-raises the previous window and undoes the switch.
@@ -844,7 +1001,7 @@ final class AppController {
     /// Screens in the order of System Settings → Displays → Arrange, left to right.
     func orderedScreens() -> [(key: WorkspaceKey, name: String)] {
         Displays.current().sorted { ($0.frame.minX, $0.frame.minY) < ($1.frame.minX, $1.frame.minY) }.map {
-            (WorkspaceKey(display: $0.uuid, space: spaces.activeSpace(ofDisplay: $0.uuid)), $0.name)
+            (visibleKey($0.uuid), $0.name)
         }
     }
 

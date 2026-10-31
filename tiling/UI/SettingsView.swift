@@ -200,7 +200,9 @@ private struct HighlightSettings: View {
 
 extension ShortcutAction {
     var title: LocalizedStringKey {
-        switch self {
+        if let number = workspaceNumber { return "Switch to workspace \(number)" }
+        if let number = moveWorkspaceNumber { return "Move window to workspace \(number)" }
+        return switch self {
         case .focusLeft: "Focus the window on the left"
         case .focusRight: "Focus the window on the right"
         case .focusUp: "Focus the window above"
@@ -230,6 +232,7 @@ extension ShortcutAction {
         case .tile3: "Tile up to 3 windows on this screen"
         case .tile4: "Tile up to 4 windows on this screen"
         case .tile5: "Tile up to 5 windows"
+        default: ""
         }
     }
 }

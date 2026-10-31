@@ -108,6 +108,9 @@ enum ShortcutAction: String, CaseIterable, Codable, Sendable {
     case bigger, smaller, resetSizes
     case float, alwaysFloat, focus, noPeek, cleanSpace, retile
     case tile1, tile2, tile3, tile4, tile5
+    case workspace1, workspace2, workspace3, workspace4, workspace5, workspace6, workspace7, workspace8, workspace9
+    case moveToWorkspace1, moveToWorkspace2, moveToWorkspace3, moveToWorkspace4, moveToWorkspace5
+    case moveToWorkspace6, moveToWorkspace7, moveToWorkspace8, moveToWorkspace9
 
     fileprivate var defaultSuffix: (key: ShortcutKey, extra: KeyModifiers) {
         switch self {
@@ -140,7 +143,17 @@ enum ShortcutAction: String, CaseIterable, Codable, Sendable {
         case .tile3: (.n3, .command)
         case .tile4: (.n4, .command)
         case .tile5: (.n5, .command)
+        // Workspace shortcuts are built from their number in `combo(for:)`.
+        default: (.n0, [])
         }
+    }
+
+    var workspaceNumber: Int? {
+        rawValue.hasPrefix("workspace") ? Int(rawValue.dropFirst("workspace".count)) : nil
+    }
+
+    var moveWorkspaceNumber: Int? {
+        rawValue.hasPrefix("moveToWorkspace") ? Int(rawValue.dropFirst("moveToWorkspace".count)) : nil
     }
 
     var isSwap: Bool {
@@ -193,6 +206,12 @@ struct ShortcutMap: Codable, Equatable, Sendable {
     func combo(for action: ShortcutAction) -> KeyCombo? {
         if let binding = bindings[action.rawValue] {
             return binding == Self.off ? nil : KeyCombo(string: binding)
+        }
+        if let number = action.workspaceNumber, let key = ShortcutKey(rawValue: "\(number)") {
+            return KeyCombo(key: key, modifiers: .option)
+        }
+        if let number = action.moveWorkspaceNumber, let key = ShortcutKey(rawValue: "\(number)") {
+            return KeyCombo(key: key, modifiers: [.option, .shift])
         }
         let suffix = action.defaultSuffix
         // Moving goes with directional focus: same arrows and modifier, plus Shift, whatever the prefix.

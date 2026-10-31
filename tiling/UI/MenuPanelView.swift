@@ -25,20 +25,30 @@ struct MenuBarIcon: View {
     let controller: AppController
 
     var body: some View {
-        Image(nsImage: Self.image(filled: controller.status.isTiling, mark: controller.hasCleanSpace))
+        Image(
+            nsImage: Self.image(
+                filled: controller.status.isTiling, mark: controller.hasCleanSpace,
+                workspace: controller.status.isTiling ? controller.pointerKey()?.virtual : nil))
     }
 
-    private static func image(filled: Bool, mark: Bool) -> NSImage {
+    private static func image(filled: Bool, mark: Bool, workspace: Int?) -> NSImage {
         let configuration = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         let symbol = NSImage(
             systemSymbolName: filled ? "rectangle.split.2x2.fill" : "rectangle.split.2x2",
             accessibilityDescription: "Tiling")?.withSymbolConfiguration(configuration)
-        let size = NSSize(width: 22, height: 18)
+        let size = NSSize(width: workspace == nil ? 22 : 34, height: 18)
         let image = NSImage(size: size, flipped: false) { _ in
             if let symbol {
                 symbol.draw(in: NSRect(
-                    x: (size.width - symbol.size.width) / 2, y: (size.height - symbol.size.height) / 2,
+                    x: (22 - symbol.size.width) / 2, y: (size.height - symbol.size.height) / 2,
                     width: symbol.size.width, height: symbol.size.height))
+            }
+            if let workspace {
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
+                    .foregroundColor: NSColor.black,
+                ]
+                ("\(workspace)" as NSString).draw(at: NSPoint(x: 23, y: 2), withAttributes: attributes)
             }
             if mark {
                 NSColor.black.setFill()
@@ -62,6 +72,7 @@ struct MenuPanelView: View {
                 PanelPreview(controller: controller, key: key)
                 windowsOnThisScreen(key)
             }
+            workspaceRow
             Divider()
             quickSwitches
             modes
@@ -184,6 +195,28 @@ struct MenuPanelView: View {
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var workspaceRow: some View {
+        let current = controller.pointerKey()?.virtual
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("Workspace").font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                ForEach(Array(VirtualWorkspaces.numbers), id: \.self) { number in
+                    Button {
+                        controller.switchToWorkspace(number)
+                    } label: {
+                        Text("\(number)")
+                            .fontWeight(controller.isWorkspaceEmpty(number) ? .regular : .bold)
+                            .frame(width: 14)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(number == current ? .orange : nil)
+                }
+            }
+        }
+        .disabled(!controller.isOperating)
     }
 
     private var quickSwitches: some View {

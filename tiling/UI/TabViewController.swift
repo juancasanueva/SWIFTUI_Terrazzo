@@ -125,7 +125,8 @@ final class TabViewController {
                 }
             }
             for record in onScreen where !placed.contains(record.id) {
-                if record.isMinimized {
+                // Parked windows of other workspaces go in the row under the desktop, ready to pick.
+                if record.isMinimized || controller.isParked(record.id) {
                     minimized.append(entry(record, frame: .zero))
                 } else if record.isTileable {
                     entries.append(entry(record, frame: record.frame))

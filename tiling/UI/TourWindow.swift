@@ -122,8 +122,9 @@ private struct TourView: View {
         VStack(spacing: 12) {
             Text("Ready").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: 6) {
-                shortcutLine("⌥ ← → ↑ ↓", "Focus the window on the left")
+                shortcutLine("⌥ ← → ↑ ↓", "Move focus between windows")
                 shortcutLine("⌥⇧ ← → ↑ ↓", "Swap windows")
+                shortcutLine("⌥ 1–9", "Switch workspace")
                 shortcutLine("⌃⌥↩", "Make the active window primary")
                 shortcutLine("⌃⌥Z", "Focus mode")
                 shortcutLine("⌃⌥D", "No peek mode")

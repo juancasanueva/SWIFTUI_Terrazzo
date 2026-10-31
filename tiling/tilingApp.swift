@@ -2,6 +2,10 @@ import AppKit
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        AppController.shared.revealHiddenWindows()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Unit tests run inside this app; they must not touch real windows or shortcuts.
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }

@@ -5,6 +5,8 @@ typealias WindowID = UInt32
 struct WorkspaceKey: Hashable, Codable, Sendable {
     var display: String
     var space: UInt64
+    /// The numbered workspace, 1 to 9. A workspace not showing is treated like a Space not showing.
+    var virtual = 1
 }
 
 enum FullScreenBehavior: String, Codable, CaseIterable, Sendable {
@@ -136,6 +138,15 @@ struct TilingState: Equatable {
             }
         }
 
+        // Windows closed while their workspace or Space wasn't showing.
+        if let existing = snapshot.existing {
+            for key in workspaces.keys where !activeKeys.contains(key) {
+                for id in allWindows(on: key) where !existing.contains(id) {
+                    remove(id, minimized: false, context: context)
+                }
+            }
+        }
+
         // A window that changed Space, or lost its display, belongs to the workspace it now sits on.
         let activeDisplays = Set(activeKeys.map(\.display))
         for window in snapshot.windows {
@@ -179,7 +190,7 @@ struct TilingState: Equatable {
         }?.key
     }
 
-    private func allWindows(on key: WorkspaceKey) -> [WindowID] {
+    func allWindows(on key: WorkspaceKey) -> [WindowID] {
         guard let workspace = workspaces[key] else { return [] }
         var ids = workspace.tiles.flatMap(\.windows) + workspace.overflow
         for id in workspace.cleanSet ?? [] where !ids.contains(id) { ids.append(id) }
@@ -522,6 +533,19 @@ struct TilingState: Equatable {
         remove(id, minimized: false, keepingApp: true, context: context)
         workspaces[target, default: Workspace()].tiles.append(Tile(windows: [id]))
         return true
+    }
+
+    /// Sends a window to a workspace, showing or not; limits apply when it next shows.
+    /// Returns the window to focus in the workspace it left.
+    mutating func send(_ id: WindowID, to target: WorkspaceKey, context: TilingContext) -> WindowID? {
+        guard let source = key(of: id), source != target,
+            workspaces[source]?.tiles.contains(where: { $0.windows.contains(id) }) == true
+        else { return nil }
+        remove(id, minimized: false, keepingApp: true, context: context)
+        workspaces[target, default: Workspace()].tiles.append(Tile(windows: [id]))
+        normalize(target, pull: false, context: context)
+        guard let left = workspaces[source] else { return nil }
+        return left.tiles[safe: left.activeTile]?.windows.first ?? left.tiles.first?.windows.first
     }
 
     /// Shows the window on top of the tile, leaving the displaced window behind it.

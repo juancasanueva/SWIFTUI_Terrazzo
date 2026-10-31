@@ -31,6 +31,8 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 | --- | --- |
 | ⌥ ←→↑↓ | Focus the window in that direction, or the next screen. Takes over word navigation in text fields; rebind it if you need that |
 | ⌥⇧ ←→↑↓ | Swap with the neighbor, or move to the next screen. Takes over selecting by word in text fields |
+| ⌥ 1–9 | Switch to that workspace |
+| ⌥⇧ 1–9 | Move the active window to that workspace |
 | ⌃⌥↩ | Make the active window primary |
 | ⌃⌥] ⌃⌥[ | Activate next / previous window |
 | ⌃⌥\` ⌃⌥⇧\` | Next / previous window in this tile |
@@ -44,6 +46,12 @@ Shortcuts use `ctrl`, `opt`, `shift` and `cmd` joined with `+`; the word `off` d
 | ⌃⌥⌘1–5 | Windows on this screen |
 
 ⌘-drag a window to swap, ⌥⌘-drag to add it to a stack, drag to another screen to move it, and drag a shared edge to resize.
+
+## Workspaces
+
+There are nine numbered workspaces, separate from macOS Spaces, working like AeroSpace's: each display shows one, and a workspace not showing keeps its windows parked in a corner of the screen. Pressing a number goes to that workspace wherever it is. Floating and excluded apps' windows stay visible on every workspace. Parked windows come back when the app quits or tiling is paused; after a crash they are tiled again on the next launch, on one workspace.
+
+On layouts where ⌥ + number types a character (⌥2 is `@` on Spanish keyboards), those characters can't be typed while the app runs. Rebind `workspace1`…`workspace9` and `moveToWorkspace1`…`moveToWorkspace9` in `shortcuts.json` if you need them.
 
 ## Layout of the code
 

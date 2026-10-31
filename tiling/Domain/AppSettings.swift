@@ -85,5 +85,8 @@ struct ScreenPreferences: Codable, Equatable, Sendable {
 struct ScreensFile: Codable, Equatable, Sendable {
     var screens: [String: ScreenPreferences] = [:]
 
-    static func id(_ key: WorkspaceKey) -> String { "\(key.display)#\(key.space)" }
+    static func id(_ key: WorkspaceKey) -> String {
+        let base = "\(key.display)#\(key.space)"
+        return key.virtual == 1 ? base : "\(base)#\(key.virtual)"
+    }
 }
