@@ -111,3 +111,29 @@ struct VirtualWorkspaces: Equatable {
         return CGPoint(x: display.minX - windowSize.width + 1, y: display.maxY - 1)
     }
 }
+
+/// Remembers that the user just went to an empty workspace. With no window to focus, nothing else says
+/// so: macOS keeps reporting the previous window for a while, and the pointer may be on another monitor.
+struct EmptyWorkspaceFocus: Equatable {
+    private(set) var display: String?
+    private var windowAtSwitch: WindowID?
+
+    mutating func wentToEmpty(display: String, focused: WindowID?) {
+        self.display = display
+        windowAtSwitch = focused
+    }
+
+    mutating func focusObserved(window: WindowID?, isShown: Bool) {
+        guard display != nil else { return }
+        guard let window else {
+            windowAtSwitch = nil
+            return
+        }
+        if isShown, window != windowAtSwitch { windowChosen() }
+    }
+
+    mutating func windowChosen() {
+        display = nil
+        windowAtSwitch = nil
+    }
+}

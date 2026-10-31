@@ -93,6 +93,7 @@ final class AppController {
     /// Windows parked in a corner because their workspace isn't showing.
     @ObservationIgnored private var hiddenWindows: Set<WindowID> = []
     @ObservationIgnored private var lastWorkspaceSwitch = Date.distantPast
+    @ObservationIgnored private var emptyFocus = EmptyWorkspaceFocus()
     @ObservationIgnored private var pendingShownFocus: String?
     @ObservationIgnored private var terminationSource: DispatchSourceSignal?
     @ObservationIgnored private var pendingPids: Set<pid_t> = []
@@ -312,9 +313,9 @@ final class AppController {
             appsByNumber[key.virtual, default: []] += ids.compactMap(appName)
         }
         let focusedKey = state.focused.flatMap { state.key(of: $0) }.flatMap { isShown($0) ? $0 : nil }
+        let current = emptyFocus.display.map(workspaceMap.number(on:)) ?? (focusedKey ?? pointerKey())?.virtual
         let report = WorkspaceReport.build(
-            map: workspaceMap, displays: displays.map(\.uuid), focused: (focusedKey ?? pointerKey())?.virtual,
-            appsByNumber: appsByNumber)
+            map: workspaceMap, displays: displays.map(\.uuid), focused: current, appsByNumber: appsByNumber)
         guard report != lastPublishedReport else { return }
         lastPublishedReport = report
         if let data = try? JSONEncoder().encode(report) {
@@ -504,6 +505,8 @@ final class AppController {
             windows: windows, minimized: records.filter(\.isMinimized).map(\.id), focused: focused,
             focusedApp: focusedOtherApp(), existing: Self.existingWindows())
         show(state.reconcile(snapshot, context: context))
+        emptyFocus.focusObserved(
+            window: focused, isShown: focused.flatMap { state.key(of: $0) }.map(isShown) ?? false)
         apply(context: context)
         restoreCoveredStacks(context: context)
         if let display = pendingShownFocus {
@@ -669,12 +672,15 @@ final class AppController {
     private func focusShowingWindow(on key: WorkspaceKey) {
         let workspace = state.workspaces[key]
         if let id = workspace.flatMap({ $0.tiles[safe: $0.activeTile]?.windows.first ?? $0.tiles.first?.windows.first }) {
+            emptyFocus.windowChosen()
             ax.focus(id)
             state.focused = id
             apply()
         } else {
+            emptyFocus.wentToEmpty(display: key.display, focused: ax.focusedWindow())
             state.focused = nil
             NSApp.activate()
+            apply()
         }
     }
 
@@ -1049,6 +1055,7 @@ final class AppController {
     }
 
     func activeKey() -> WorkspaceKey? {
+        if let display = emptyFocus.display { return visibleKey(display) }
         if let id = shownFocusedWindow(), let key = state.key(of: id) { return key }
         return pointerKey()
     }
@@ -1161,6 +1168,13 @@ final class AppController {
         lastApplied[id] = nil
     }
 
+    /// A click on a window says where the user is, even when macOS never stopped reporting that window.
+    func windowPressed() {
+        guard emptyFocus.display != nil else { return }
+        emptyFocus.windowChosen()
+        scheduleRefresh(pid: nil)
+    }
+
     func dragEnded() {
         scheduleRefresh(pid: nil)
     }
@@ -1190,6 +1204,7 @@ final class AppController {
     }
 
     func showWindow(_ id: WindowID) {
+        emptyFocus.windowChosen()
         // Tab View and chips can pick a window from a workspace that isn't showing.
         if let key = state.key(of: id), !isShown(key) {
             _ = workspaceMap.show(key.virtual, focusedDisplay: key.display, isEmpty: false)

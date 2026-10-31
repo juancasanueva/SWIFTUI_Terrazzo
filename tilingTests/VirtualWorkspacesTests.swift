@@ -73,6 +73,47 @@ struct VirtualWorkspacesTests {
         #expect(origin == CGPoint(x: -499, y: 799))
     }
 
+    // MARK: Going to an empty workspace
+
+    @Test func anEmptyWorkspaceStaysCurrentWhileMacOSKeepsReportingTheOldWindow() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.focusObserved(window: 5, isShown: false)
+        #expect(empty.display == "B")
+        empty.focusObserved(window: 5, isShown: true)
+        #expect(empty.display == "B")
+    }
+
+    @Test func movingToAnotherShownWindowEndsIt() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.focusObserved(window: 6, isShown: true)
+        #expect(empty.display == nil)
+    }
+
+    @Test func aParkedWindowDoesNotEndIt() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.focusObserved(window: 6, isShown: false)
+        #expect(empty.display == "B")
+    }
+
+    @Test func comingBackToTheSameWindowAfterLosingFocusEndsIt() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.focusObserved(window: nil, isShown: false)
+        #expect(empty.display == "B")
+        empty.focusObserved(window: 5, isShown: true)
+        #expect(empty.display == nil)
+    }
+
+    @Test func choosingAWindowEndsIt() {
+        var empty = EmptyWorkspaceFocus()
+        empty.wentToEmpty(display: "B", focused: 5)
+        empty.windowChosen()
+        #expect(empty.display == nil)
+    }
+
     // MARK: Pinned workspaces
 
     private func pinned() -> VirtualWorkspaces {

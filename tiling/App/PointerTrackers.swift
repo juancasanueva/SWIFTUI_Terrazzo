@@ -50,6 +50,7 @@ final class DragTracker {
         guard let id = controller.tiledWindow(at: Displays.pointerLocation(), tolerance: 6),
             let frame = controller.ax.currentFrame(of: id)
         else { return }
+        controller.windowPressed()
         window = id
         startFrame = frame
         kind = nil
