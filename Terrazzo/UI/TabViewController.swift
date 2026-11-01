@@ -222,11 +222,16 @@ private struct TabViewContent: View {
     @Bindable var model: TabViewModel
 
     private static let screenWidth: CGFloat = 460
+    private static let iconSize: CGFloat = 48
+    private static let smallestIconSize: CGFloat = 24
+    /// Tall enough for a full-size icon above the two lines of text.
+    private static let minimizedCardHeight: CGFloat = 88
 
     static func preferredSize(for screens: [TabScreen]) -> CGSize {
         let width = CGFloat(screens.count) * (screenWidth + 16) + 32
         let tallest = screens.map { screenHeight($0) }.max() ?? 280
-        return CGSize(width: width, height: tallest + 100)
+        let hasMinimized = screens.contains { !$0.minimized.isEmpty }
+        return CGSize(width: width, height: tallest + (hasMinimized ? 60 + minimizedCardHeight : 100))
     }
 
     private static func screenHeight(_ screen: TabScreen) -> CGFloat {
@@ -242,7 +247,7 @@ private struct TabViewContent: View {
                     if !screen.minimized.isEmpty {
                         HStack(spacing: 6) {
                             ForEach(screen.minimized) { entry in
-                                card(entry).frame(width: 120, height: 40)
+                                card(entry).frame(width: 120, height: Self.minimizedCardHeight)
                             }
                         }
                     }
@@ -273,7 +278,11 @@ private struct TabViewContent: View {
     private func card(_ entry: TabEntry) -> some View {
         VStack(spacing: 2) {
             if let icon = NSRunningApplication(processIdentifier: entry.pid)?.icon {
-                Image(nsImage: icon).resizable().frame(width: 24, height: 24)
+                // Shrinks on a tile too short for it, so the text stays inside the card.
+                Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit)
+                    .frame(
+                        minWidth: Self.smallestIconSize, maxWidth: Self.iconSize,
+                        minHeight: Self.smallestIconSize, maxHeight: Self.iconSize)
             }
             Text(entry.appName).font(.caption.weight(.semibold)).lineLimit(1)
             Text(entry.title).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
