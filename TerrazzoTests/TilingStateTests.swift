@@ -85,6 +85,39 @@ struct TilingStateTests {
         #expect(tiles(state, otherSpace) == [[2]])
     }
 
+    /// Reconnecting a monitor renumbers Spaces: the old Space can end up on the other display.
+    @Test func aWindowOnAnotherDisplayLeavesAWorkspaceWhoseSpaceIsGone() {
+        let gone = WorkspaceKey(display: "R", space: 1, virtual: 7)
+        let single = TilingContext(
+            screens: [ScreenGeometry(key: gone, area: rightArea)], policy: TilingPolicy(gap: 0),
+            minimumSize: { _ in .zero })
+        var state = TilingState()
+        _ = state.reconcile(snapshot([1], on: gone), context: single)
+
+        let renumbered = WorkspaceKey(display: "R", space: 29, virtual: 7)
+        let both = TilingContext(
+            screens: [
+                ScreenGeometry(key: left, area: leftArea), ScreenGeometry(key: renumbered, area: rightArea),
+            ],
+            policy: TilingPolicy(gap: 0), minimumSize: { _ in .zero })
+        _ = state.reconcile(snapshot([1], on: left), context: both)
+
+        #expect(state.key(of: 1) == left)
+        #expect(tiles(state) == [[1]])
+        #expect(tiles(state, gone).isEmpty)
+        #expect(state.plan(context: both).placements == [Placement(id: 1, frame: leftArea)])
+    }
+
+    /// A window that strays from a workspace still showing goes back to its slot.
+    @Test func aWindowOnAnotherDisplayStaysInAWorkspaceThatIsShowing() {
+        let ctx = context(oneScreen: false)
+        var state = TilingState()
+        _ = state.reconcile(snapshot([1], on: right), context: ctx)
+        _ = state.reconcile(snapshot([1], on: left), context: ctx)
+        #expect(state.key(of: 1) == right)
+        #expect(tiles(state).isEmpty)
+    }
+
     @Test func aTabReplacesItsWindowWithoutMovingAnything() {
         var state = filled([1, 2])
         _ = state.plan(context: context())

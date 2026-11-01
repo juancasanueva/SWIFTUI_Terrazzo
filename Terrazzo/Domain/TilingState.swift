@@ -165,11 +165,13 @@ struct TilingState: Equatable {
             }
         }
 
-        // A window that changed Space, or lost its display, belongs to the workspace it now sits on.
-        let activeDisplays = Set(activeKeys.map(\.display))
+        // A window that changed Space, or whose Space is no longer showing on its display, belongs to the
+        // workspace it now sits on. Reconnecting a monitor renumbers Spaces, so the display can still be
+        // connected while the Space is gone.
         for window in snapshot.windows {
             guard let stored = key(of: window.id), stored != window.key else { continue }
-            if stored.display == window.key.display || !activeDisplays.contains(stored.display) {
+            let spaceShowing = activeKeys.contains { $0.display == stored.display && $0.space == stored.space }
+            if stored.display == window.key.display || !spaceShowing {
                 remove(window.id, minimized: false, context: context)
                 added.append(window)
             }
