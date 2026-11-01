@@ -87,7 +87,7 @@ struct TilingStateTests {
 
     /// Reconnecting a monitor renumbers Spaces: the old Space can end up on the other display.
     @Test func aWindowOnAnotherDisplayLeavesAWorkspaceWhoseSpaceIsGone() {
-        let gone = WorkspaceKey(display: "R", space: 1, virtual: 7)
+        let gone = WorkspaceKey(display: "R", space: 1)
         let single = TilingContext(
             screens: [ScreenGeometry(key: gone, area: rightArea)], policy: TilingPolicy(gap: 0),
             minimumSize: { _ in .zero })
@@ -106,6 +106,53 @@ struct TilingStateTests {
         #expect(tiles(state) == [[1]])
         #expect(tiles(state, gone).isEmpty)
         #expect(state.plan(context: both).placements == [Placement(id: 1, frame: leftArea)])
+    }
+
+    /// Unplugging a monitor and plugging it back must not change which workspace a hidden window is in.
+    @Test func aHiddenWindowKeepsItsWorkspaceAcrossAMonitorReconnect() {
+        let parked = WorkspaceKey(display: "L", space: 1, virtual: 2)
+        func both(_ rightSpace: UInt64, showing: WorkspaceKey) -> TilingContext {
+            TilingContext(
+                screens: [
+                    ScreenGeometry(key: showing, area: leftArea),
+                    ScreenGeometry(key: WorkspaceKey(display: "R", space: rightSpace, virtual: 7), area: rightArea),
+                ],
+                policy: TilingPolicy(gap: 0), minimumSize: { _ in .zero })
+        }
+        var state = TilingState()
+        _ = state.reconcile(snapshot([1, 2], on: parked), context: both(29, showing: parked))
+
+        let alone = WorkspaceKey(display: "R", space: 1, virtual: 7)
+        let unplugged = TilingContext(
+            screens: [ScreenGeometry(key: alone, area: rightArea)], policy: TilingPolicy(gap: 0),
+            minimumSize: { _ in .zero })
+        _ = state.reconcile(snapshot([1, 2], on: alone), context: unplugged)
+        let moved = WorkspaceKey(display: "R", space: 1, virtual: 2)
+        #expect(tiles(state, moved) == [[1], [2]])
+        #expect(tiles(state, alone).isEmpty)
+        #expect(state.plan(context: unplugged).placements.isEmpty)
+
+        _ = state.reconcile(snapshot([1, 2], on: left), context: both(35, showing: left))
+        #expect(tiles(state, parked) == [[1], [2]])
+        #expect(tiles(state, left).isEmpty)
+        #expect(tiles(state, moved).isEmpty)
+    }
+
+    @Test func aHiddenWindowKeepsItsWorkspaceWhenItsDisplayGetsANewSpace() {
+        let parked = WorkspaceKey(display: "R", space: 29, virtual: 8)
+        var state = TilingState()
+        let before = TilingContext(
+            screens: [ScreenGeometry(key: parked, area: rightArea)], policy: TilingPolicy(gap: 0),
+            minimumSize: { _ in .zero })
+        _ = state.reconcile(snapshot([1], on: parked), context: before)
+
+        let showing = WorkspaceKey(display: "R", space: 1, virtual: 7)
+        let after = TilingContext(
+            screens: [ScreenGeometry(key: showing, area: rightArea)], policy: TilingPolicy(gap: 0),
+            minimumSize: { _ in .zero })
+        _ = state.reconcile(snapshot([1], on: showing), context: after)
+        #expect(state.key(of: 1) == WorkspaceKey(display: "R", space: 1, virtual: 8))
+        #expect(tiles(state, showing).isEmpty)
     }
 
     /// A window that strays from a workspace still showing goes back to its slot.

@@ -72,8 +72,9 @@ struct VirtualWorkspaces: Equatable {
     mutating func sync(displays: [String], occupied: [Int: String] = [:]) {
         remembered.merge(visible) { _, current in current }
         connected = Set(displays)
+        homes.merge(occupied) { _, holding in holding }
         visible = visible.filter { display, number in
-            connected.contains(display) && (pinnedDisplay(of: number) ?? display) == display
+            connected.contains(display) && (pinnedDisplay(of: number) ?? occupied[number] ?? display) == display
         }
         for display in displays where visible[display] == nil {
             func usable(_ number: Int) -> Bool {

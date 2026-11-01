@@ -235,6 +235,34 @@ struct VirtualWorkspacesTests {
         #expect(map.number(on: "A") == 2)
     }
 
+    /// Windows that moved to another display while theirs was away must still be found by number.
+    @Test func aWorkspaceBelongsToTheDisplayHoldingItsWindows() {
+        var map = synced(["A", "B"])
+        map.adopt(7, on: "B")
+        map.sync(displays: ["A", "B"], occupied: [7: "A"])
+        #expect(map.home(of: 7) == "A")
+        #expect(map.show(7, focusedDisplay: "B", isEmpty: false) == "A")
+    }
+
+    /// Showing a number on one display while its windows are on another would leave them out of reach.
+    @Test func aDisplayStopsShowingAWorkspaceWhoseWindowsAreElsewhere() {
+        var map = synced(["A", "B"])
+        _ = map.show(7, focusedDisplay: "B", isEmpty: true)
+        map.sync(displays: ["A", "B"], occupied: [7: "A"])
+        #expect(map.number(on: "B") != 7)
+        #expect(map.show(7, focusedDisplay: "B", isEmpty: false) == "A")
+        #expect(map.number(on: "A") == 7)
+    }
+
+    @Test func aPinnedWorkspaceStaysOnItsDisplayWhateverHoldsItsWindows() {
+        var map = synced(["A", "B"])
+        map.setPins([7: "B"])
+        map.sync(displays: ["A", "B"])
+        _ = map.show(7, focusedDisplay: "A", isEmpty: true)
+        map.sync(displays: ["A", "B"], occupied: [7: "A"])
+        #expect(map.number(on: "B") == 7)
+    }
+
     @Test func aNewDisplayDoesNotTakeAWorkspaceInUseAfterVisitingAllNine() {
         var map = synced(["A"])
         for number in VirtualWorkspaces.numbers { _ = map.show(number, focusedDisplay: "A", isEmpty: true) }

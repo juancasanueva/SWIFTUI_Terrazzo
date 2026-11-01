@@ -165,15 +165,22 @@ struct TilingState: Equatable {
             }
         }
 
-        // A window that changed Space, or whose Space is no longer showing on its display, belongs to the
-        // workspace it now sits on. Reconnecting a monitor renumbers Spaces, so the display can still be
-        // connected while the Space is gone.
+        // A window that changed Space, or whose Space is no longer showing on its display, moves to where
+        // it now sits and stays in its numbered workspace. Reconnecting a monitor renumbers Spaces, so the
+        // display can still be connected while the Space is gone.
         for window in snapshot.windows {
             guard let stored = key(of: window.id), stored != window.key else { continue }
             let spaceShowing = activeKeys.contains { $0.display == stored.display && $0.space == stored.space }
-            if stored.display == window.key.display || !spaceShowing {
-                remove(window.id, minimized: false, context: context)
-                added.append(window)
+            guard stored.display == window.key.display || !spaceShowing else { continue }
+            let target = WorkspaceKey(display: window.key.display, space: window.key.space, virtual: stored.virtual)
+            guard target != stored else { continue }
+            remove(window.id, minimized: false, context: context)
+            if activeKeys.contains(target) {
+                added.append(ObservedWindow(id: window.id, app: window.app, key: target, frame: window.frame))
+            } else {
+                // Limits of a workspace that isn't showing are unknown; it is normalized when it returns.
+                apps[window.id] = window.app
+                workspaces[target, default: Workspace()].tiles.append(Tile(windows: [window.id]))
             }
         }
 

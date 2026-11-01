@@ -605,7 +605,10 @@ final class AppController {
         for (key, workspace) in state.workspaces
         where !workspace.tiles.isEmpty && key.space == spaces.activeSpace(ofDisplay: key.display)
             && displays.contains(where: { $0.uuid == key.display }) {
-            occupied[key.virtual] = key.display
+            // A number can hold windows on two displays for a moment; the one showing it keeps it.
+            if occupied[key.virtual] == nil || workspaceMap.display(showing: key.virtual) == key.display {
+                occupied[key.virtual] = key.display
+            }
         }
         updated.sync(displays: displays.map(\.uuid), occupied: occupied)
         if updated != workspaceMap { workspaceMap = updated }
