@@ -10,6 +10,20 @@ struct ConfigTests {
         return url
     }
 
+    @Test func aSavedIconChoiceIsIgnoredAndDroppedOnTheNextSave() throws {
+        let url = try temporaryDirectory().appendingPathComponent("settings.json")
+        try Data(#"{"iconStyle": "washi", "gap": 12}"#.utf8).write(to: url)
+        let file = ConfigFile(url: url, defaults: AppSettings())
+
+        let settings = try file.load()
+        #expect(settings.gap == 12)
+
+        try file.save(settings)
+        let saved = try String(contentsOf: url, encoding: .utf8)
+        #expect(!saved.contains("iconStyle"))
+        #expect(saved.contains("\"gap\" : 12"))
+    }
+
     @Test func directoryPrefersXDGAndFallsBackToDotConfig() {
         let home = URL(fileURLWithPath: "/Users/me")
         #expect(ConfigDirectory.url(home: home, environment: [:]).path == "/Users/me/.config/terrazzo")

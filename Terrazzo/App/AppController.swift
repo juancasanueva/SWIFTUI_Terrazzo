@@ -412,7 +412,7 @@ final class AppController {
     }
 
     private func settingsChanged(from old: AppSettings) {
-        if old.appearance != settings.appearance || old.iconStyle != settings.iconStyle { applyAppearance() }
+        if old.appearance != settings.appearance { applyAppearance() }
         if old.openAtLogin != settings.openAtLogin { applyLoginItem() }
         settings.applyUpdatePreference(changedFrom: old, to: updater)
         if old.hoverFocus != settings.hoverFocus { hoverFocus.update(enabled: settings.hoverFocus && isOperating) }
@@ -435,9 +435,6 @@ final class AppController {
         case .light: NSApp.appearance = NSAppearance(named: .aqua)
         case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
         }
-        // Nil restores the icon in the app's bundle.
-        NSApp.applicationIconImage = settings.iconStyle.usesBundledIcon
-            ? nil : AppIconRenderer.image(for: settings.iconStyle)
     }
 
     private func applyLoginItem() {

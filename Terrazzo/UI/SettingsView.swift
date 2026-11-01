@@ -54,11 +54,6 @@ private struct GeneralSettings: View {
                     Text("Mist").tag(CleanBackground.mist)
                     Text("Stone").tag(CleanBackground.stone)
                 }
-                Picker("App icon", selection: $controller.settings.iconStyle) {
-                    ForEach(IconStyle.allCases, id: \.self) { style in
-                        Text(style.rawValue.capitalized).tag(style)
-                    }
-                }
             }
             Section {
                 LabeledContent("Permission") {
@@ -499,11 +494,9 @@ private struct AboutSettings: View {
                     Text(verbatim: version)
                 } label: {
                     HStack(spacing: 10) {
-                        // Follows the icon style chosen in General.
                         Image(nsImage: NSApp.applicationIconImage)
                             .resizable()
                             .frame(width: 48, height: 48)
-                            .id(controller.settings.iconStyle)
                             .accessibilityHidden(true)
                         Text("Terrazzo")
                     }

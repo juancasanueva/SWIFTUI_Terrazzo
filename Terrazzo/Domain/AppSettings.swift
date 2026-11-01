@@ -13,13 +13,6 @@ enum AppearanceChoice: String, Codable, CaseIterable, Sendable {
     case system, light, dark
 }
 
-enum IconStyle: String, Codable, CaseIterable, Sendable {
-    case terrazzo, washi, lantern, indigo, sunset, torii, glass, focus
-
-    /// The icon in the app's bundle, rather than one drawn at launch.
-    var usesBundledIcon: Bool { self == .terrazzo }
-}
-
 struct ScreenEdges: Codable, Equatable, Sendable {
     var top: CGFloat = 0
     var left: CGFloat = 0
@@ -99,7 +92,6 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// Language code, or unset to follow the Mac.
     var language: String?
     var openAtLogin = true
-    var iconStyle: IconStyle = .terrazzo
     /// Checking is network traffic, so it stays off until the user turns it on.
     var automaticUpdateChecks = false
 }

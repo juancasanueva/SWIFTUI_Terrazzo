@@ -176,18 +176,6 @@ struct InterfaceSmokeTests {
         #expect(DividerMetrics.order(hitFrame: strip, tiles: [1], frontToBack: windows) == nil)
     }
 
-    @Test func theTerrazzoIconIsTheDefault() {
-        #expect(AppSettings().iconStyle == .terrazzo)
-        #expect(IconStyle.terrazzo.usesBundledIcon)
-        #expect(!IconStyle.washi.usesBundledIcon)
-    }
-
-    @Test func everyIconStyleDraws() {
-        for style in IconStyle.allCases {
-            #expect(AppIconRenderer.image(for: style).tiffRepresentation != nil)
-        }
-    }
-
     @Test func everyShortcutHasKeysAndAUniqueDefault() {
         let map = ShortcutMap()
         let unassigned: Set<ShortcutAction> = [.bigger, .smaller]
