@@ -9,6 +9,8 @@ struct TabEntry: Identifiable, Equatable {
     var title: String
     var pid: pid_t
     var isMinimized: Bool
+    /// Sits over the tiles, so its card needs an outline to stand out from the cards beneath it.
+    var isFloating = false
 }
 
 struct TabScreen: Identifiable, Equatable {
@@ -129,7 +131,7 @@ final class TabViewController {
                 if record.isMinimized || controller.isParked(record.id) {
                     minimized.append(entry(record, frame: .zero))
                 } else if record.isTileable {
-                    entries.append(entry(record, frame: record.frame))
+                    entries.append(entry(record, frame: record.frame, isFloating: true))
                 }
             }
             return TabScreen(
@@ -143,10 +145,10 @@ final class TabViewController {
         Displays.current().sorted { ($0.frame.minX, $0.frame.minY) < ($1.frame.minX, $1.frame.minY) }
     }
 
-    private func entry(_ record: WindowRecord, frame: CGRect) -> TabEntry {
+    private func entry(_ record: WindowRecord, frame: CGRect, isFloating: Bool = false) -> TabEntry {
         TabEntry(
             id: record.id, frame: frame, appName: record.appName, title: controller.ax.title(of: record.id),
-            pid: record.pid, isMinimized: record.isMinimized)
+            pid: record.pid, isMinimized: record.isMinimized, isFloating: isFloating)
     }
 
     private func advance(backward: Bool) {
@@ -293,6 +295,8 @@ private struct TabViewContent: View {
         .overlay {
             if model.selection == entry.id {
                 RoundedRectangle(cornerRadius: 6).stroke(Color.orange, lineWidth: 2)
+            } else if entry.isFloating {
+                RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.6), lineWidth: 1.5)
             }
         }
         .contentShape(Rectangle())
