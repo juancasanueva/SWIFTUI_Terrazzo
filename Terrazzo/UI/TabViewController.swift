@@ -294,7 +294,7 @@ private struct TabViewContent: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
         .overlay {
             if model.selection == entry.id {
-                RoundedRectangle(cornerRadius: 6).stroke(Color.orange, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 6).stroke(Color.accentColor, lineWidth: 2)
             } else if entry.isFloating {
                 RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.6), lineWidth: 1.5)
             }

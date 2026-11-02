@@ -176,7 +176,7 @@ struct MenuPanelView: View {
                         Image(systemName: option.symbol).frame(width: 26, height: 20)
                     }
                     .buttonStyle(.bordered)
-                    .tint(option == kind ? .orange : nil)
+                    .tint(option == kind ? .accentColor : nil)
                     .disabled(vertical && option == .columns)
                     .help(Text(option.title))
                 }
@@ -184,7 +184,7 @@ struct MenuPanelView: View {
                 ForEach(1...(maxCount == 5 ? 5 : 4), id: \.self) { count in
                     Button("\(count)") { controller.setCount(count, on: key) }
                         .buttonStyle(.bordered)
-                        .tint(count == selected ? .orange : nil)
+                        .tint(count == selected ? .accentColor : nil)
                         .disabled(count > maxCount)
                 }
             }
@@ -214,7 +214,7 @@ struct MenuPanelView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .tint(number == current ? .orange : nil)
+                    .tint(number == current ? .accentColor : nil)
                 }
             }
         }
@@ -342,7 +342,7 @@ private struct PanelPreview: View {
                 Text("Focus").font(.caption2.weight(.semibold)).offset(y: 18)
             }
             if isActive {
-                RoundedRectangle(cornerRadius: 4).stroke(Color.orange, lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: 4).stroke(Color.accentColor, lineWidth: 1.5)
             }
         }
     }
