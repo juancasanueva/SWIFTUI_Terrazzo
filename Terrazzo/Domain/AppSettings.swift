@@ -132,4 +132,18 @@ struct ScreensFile: Codable, Equatable, Sendable {
         let base = "\(key.display)#\(key.space)"
         return key.virtual == 1 ? base : "\(base)#\(key.virtual)"
     }
+
+    /// Ignores the Space, because macOS gives a reconnected monitor's Space a new id.
+    static func fallbackID(_ key: WorkspaceKey) -> String {
+        "\(key.display)#workspace#\(key.virtual)"
+    }
+
+    func preferences(for key: WorkspaceKey) -> ScreenPreferences? {
+        screens[Self.id(key)] ?? screens[Self.fallbackID(key)]
+    }
+
+    mutating func set(_ preferences: ScreenPreferences, for key: WorkspaceKey) {
+        screens[Self.id(key)] = preferences
+        screens[Self.fallbackID(key)] = preferences
+    }
 }

@@ -101,7 +101,7 @@ Settings are plain JSON in `~/.config/terrazzo/`, or `$XDG_CONFIG_HOME/terrazzo/
 | `settings.json` | Layout, spacing, appearance and behavior |
 | `shortcuts.json` | The shortcuts you changed |
 | `apps.json` | Apps that are never tiled, and learned minimum sizes |
-| `screens.json` | Layout, window count and sizes per screen and workspace |
+| `screens.json` | Layout, window count and sizes per screen and workspace. They survive unplugging and replugging a monitor |
 | `layout.json` | Where windows are, written by the app. Window numbers and app identifiers |
 | `run/state.json` | Workspaces for the command line, written by the app. Numbers, monitor positions and app names |
 

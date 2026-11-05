@@ -374,15 +374,15 @@ final class AppController {
 
     private func saveScreenPreferences(_ key: WorkspaceKey) {
         guard let workspace = state.workspaces[key] else { return }
-        screens.screens[ScreensFile.id(key)] = ScreenPreferences(
-            kind: workspace.kind, count: workspace.count, overrides: workspace.overrides)
+        screens.set(
+            ScreenPreferences(kind: workspace.kind, count: workspace.count, overrides: workspace.overrides), for: key)
         save(screens, to: screensFile)
     }
 
     private func hydrate(_ key: WorkspaceKey) {
         guard state.workspaces[key] == nil else { return }
         var workspace = Workspace()
-        if let stored = screens.screens[ScreensFile.id(key)] {
+        if let stored = screens.preferences(for: key) {
             workspace.kind = stored.kind
             workspace.count = stored.count
             workspace.overrides = stored.overrides
@@ -393,7 +393,7 @@ final class AppController {
     private func applyScreenPreferencesToWorkspaces() {
         var changed = false
         for key in state.workspaces.keys {
-            guard let stored = screens.screens[ScreensFile.id(key)], var workspace = state.workspaces[key] else {
+            guard let stored = screens.preferences(for: key), var workspace = state.workspaces[key] else {
                 continue
             }
             if workspace.kind != stored.kind || workspace.count != stored.count

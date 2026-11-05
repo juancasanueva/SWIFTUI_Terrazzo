@@ -405,4 +405,28 @@ struct VirtualWorkspacesTests {
         #expect(ScreensFile.id(one) == "A#1")
         #expect(ScreensFile.id(three) == "A#1#3")
     }
+
+    @Test func preferencesSurviveANewSpaceIdAfterReconnect() {
+        var file = ScreensFile()
+        let saved = ScreenPreferences(kind: .columns, count: 2)
+        file.set(saved, for: three)
+        let renumbered = WorkspaceKey(display: "A", space: 110, virtual: 3)
+        #expect(file.preferences(for: renumbered) == saved)
+        #expect(file.preferences(for: WorkspaceKey(display: "B", space: 110, virtual: 3)) == nil)
+        #expect(file.preferences(for: WorkspaceKey(display: "A", space: 110, virtual: 4)) == nil)
+    }
+
+    @Test func preferencesOfTheExactSpaceWinOverTheFallback() {
+        var file = ScreensFile()
+        let other = WorkspaceKey(display: "A", space: 2, virtual: 3)
+        file.set(ScreenPreferences(kind: .columns, count: 2), for: three)
+        file.set(ScreenPreferences(kind: .rows, count: 3), for: other)
+        #expect(file.preferences(for: three) == ScreenPreferences(kind: .columns, count: 2))
+        #expect(file.preferences(for: other) == ScreenPreferences(kind: .rows, count: 3))
+    }
+
+    @Test func fallbackIdDoesNotCollideWithSpaceIds() {
+        #expect(ScreensFile.fallbackID(one) != ScreensFile.id(one))
+        #expect(ScreensFile.fallbackID(three) == "A#workspace#3")
+    }
 }
