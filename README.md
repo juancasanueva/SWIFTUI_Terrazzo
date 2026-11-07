@@ -2,6 +2,8 @@
 
 A tiling window manager for macOS. Windows take a place when they open, the rest fill the space when one closes, and extra windows stack in the tile you're using. There's a menu-bar panel and a Settings window, and everything is also a plain file in `~/.config/terrazzo/`.
 
+**Website:** [terrazzo-mac.vercel.app](https://terrazzo-mac.vercel.app), with a live demo of how windows are arranged.
+
 ![Four windows tiled by Terrazzo on an ultrawide screen: two tall columns on the left and two stacked tiles on the right](Design/screenshot-tiled.png)
 
 Its numbered workspaces and command line are inspired by [AeroSpace](https://github.com/nikitabobko/AeroSpace), but it is an independent project, not affiliated with it.
