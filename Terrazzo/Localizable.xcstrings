@@ -1625,6 +1625,34 @@
         }
       }
     },
+    "Follow a window moved to another workspace": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguir a una ventana movida a otro espacio de trabajo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のワークスペースに移動したウインドウを追う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 워크스페이스로 옮긴 윈도우 따라가기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟随移到其他工作区的窗口"
+          }
+        }
+      }
+    },
     "Forget All": {
       "localizations": {
         "es": {

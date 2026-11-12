@@ -680,8 +680,13 @@ final class AppController {
         workspaceMap.adopt(number, on: display)
         lastWorkspaceSwitch = Date()
         _ = state.send(id, to: target, context: context())
-        apply()
-        focusShowingWindow(on: source)
+        if settings.followMovedWindow {
+            showWindow(id)
+            movePointer(toWindow: id, displays: Displays.current())
+        } else {
+            apply()
+            focusShowingWindow(on: source)
+        }
     }
 
     /// With nothing to focus, keyboard input must not keep going to a parked window.

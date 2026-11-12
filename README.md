@@ -48,7 +48,7 @@ Every shortcut can be changed or turned off in Settings → Keyboard, or in `sho
 | ⌃⌥ ←→↑↓ | Resize: move the window's edge that way |
 | ⌃⌥0 | Reset sizes on this screen |
 | ⌃ 1–9 | Switch to that workspace |
-| ⌃⇧ 1–9 | Move the active window to that workspace |
+| ⌃⇧ 1–9 | Move the active window to that workspace, and follow it there |
 | ⌃N ⌃⇧N | Next / previous window in this stack |
 | ⌃⇥ ⌃⇧⇥ | Tab View: every window, by screen. Hold ⌃, then release to switch |
 | ⌃⌥] ⌃⌥[ | Activate the next / previous window on this screen |
@@ -141,6 +141,7 @@ Settings are plain JSON in `~/.config/terrazzo/`, or `$XDG_CONFIG_HOME/terrazzo/
 | `highlight.style` | `none`, `activeBorder`, `allBorders` or `glow` |
 | `highlight.cornerRadius` | Corner radius of the windows being outlined. Standard windows measure about 16 |
 | `stackBar.hoverDelay` | Seconds resting on a bar before the panel opens, 0 to 10 |
+| `followMovedWindow` | Moving a window to another workspace also goes there, with that window focused. On by default |
 | `workspaceDisplays` | Workspace number to part of a monitor's name. It shows there while that monitor is connected |
 | `screenEdges` | Space to keep clear on every screen, for bars from other apps. `screenEdgesByDisplay` does it for one display, by its UUID |
 | `onWorkspaceChange` | A program and arguments to run when workspaces change. It runs without a shell, and `{workspace}` becomes the current number |

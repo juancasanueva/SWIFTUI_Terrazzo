@@ -84,6 +84,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// `{workspace}` becomes the focused workspace number. Runs directly, without a shell.
     var onWorkspaceChange: [String] = []
     var hoverFocus = false
+    /// Moving a window to another workspace also goes there, with that window focused.
+    var followMovedWindow = true
     /// Workspace number to part of a display name, such as `"7": "Odyssey"`. The workspace always
     /// shows on that display while it is connected.
     var workspaceDisplays: [String: String] = [:]

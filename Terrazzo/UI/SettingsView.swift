@@ -208,6 +208,7 @@ private struct HighlightSettings: View {
                     }
                 }
                 Toggle("Hover focus", isOn: $controller.settings.hoverFocus)
+                Toggle("Follow a window moved to another workspace", isOn: $controller.settings.followMovedWindow)
                 Toggle("Move the pointer to the focused window", isOn: $controller.settings.movePointer.onWindowFocus)
                 Toggle("Move the pointer to the focused monitor", isOn: $controller.settings.movePointer.onMonitorChange)
             }

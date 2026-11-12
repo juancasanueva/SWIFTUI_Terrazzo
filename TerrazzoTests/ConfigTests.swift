@@ -47,6 +47,16 @@ struct ConfigTests {
         #expect(highlight.outerRadius == 8)
     }
 
+    @Test func focusFollowsAMovedWindowUnlessTurnedOff() throws {
+        #expect(AppSettings().followMovedWindow)
+
+        let url = try temporaryDirectory().appendingPathComponent("settings.json")
+        try Data(#"{"followMovedWindow": false, "gap": 12}"#.utf8).write(to: url)
+        let settings = try ConfigFile(url: url, defaults: AppSettings()).load()
+        #expect(!settings.followMovedWindow)
+        #expect(settings.gap == 12)
+    }
+
     @Test func resizeStepDefaultsToFivePercent() {
         #expect(AppSettings().resizeStep == 5)
         #expect(AppSettings().resolvedResizeStep == 0.05)
