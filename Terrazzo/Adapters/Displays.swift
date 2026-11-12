@@ -66,10 +66,12 @@ final class SpaceReader {
     private typealias MainConnection = @convention(c) () -> Int32
     private typealias CurrentSpace = @convention(c) (Int32, CFString) -> UInt64
     private typealias SpacesForWindows = @convention(c) (Int32, Int32, CFArray) -> Unmanaged<CFArray>?
+    private typealias ManagedDisplays = @convention(c) (Int32) -> Unmanaged<CFArray>?
 
     private let connection: Int32
     private let currentSpace: CurrentSpace?
     private let spacesForWindows: SpacesForWindows?
+    private let managedDisplays: ManagedDisplays?
 
     init() {
         let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY)
@@ -79,6 +81,12 @@ final class SpaceReader {
         connection = load("SLSMainConnectionID", as: MainConnection.self)?() ?? 0
         currentSpace = load("SLSManagedDisplayGetCurrentSpace", as: CurrentSpace.self)
         spacesForWindows = load("SLSCopySpacesForWindows", as: SpacesForWindows.self)
+        managedDisplays = load("SLSCopyManagedDisplays", as: ManagedDisplays.self)
+    }
+
+    /// Display UUIDs in Mission Control's order; empty when SkyLight doesn't provide it.
+    func displayOrder() -> [String] {
+        (managedDisplays?(connection)?.takeRetainedValue() as? [String]) ?? []
     }
 
     func activeSpace(ofDisplay uuid: String) -> UInt64 {

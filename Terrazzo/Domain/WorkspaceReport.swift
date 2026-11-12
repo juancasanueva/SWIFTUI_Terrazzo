@@ -5,7 +5,7 @@ import Foundation
 struct WorkspaceReport: Codable, Equatable, Sendable {
     struct Entry: Codable, Equatable, Sendable {
         var number: Int
-        /// The monitor's position among the connected ones, from 1.
+        /// The monitor's position among the connected ones, from 1, in `monitorOrder`.
         var monitor: Int
         var isVisible: Bool
         var apps: [String]
@@ -13,6 +13,14 @@ struct WorkspaceReport: Codable, Equatable, Sendable {
 
     var focused: Int?
     var workspaces: [Entry] = []
+
+    /// Monitors in Mission Control's order, which SketchyBar numbers as `arrangement-id`. It can differ
+    /// from `NSScreen.screens` once three monitors are connected. Screens it doesn't list follow, in
+    /// their own order.
+    static func monitorOrder(screens: [String], managed: [String]) -> [String] {
+        let listed = managed.filter(screens.contains)
+        return listed + screens.filter { !listed.contains($0) }
+    }
 
     static func build(
         map: VirtualWorkspaces, displays: [String], focused: Int?, appsByNumber: [Int: [String]]

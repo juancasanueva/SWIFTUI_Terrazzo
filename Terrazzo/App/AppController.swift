@@ -326,7 +326,9 @@ final class AppController {
         let focusedKey = state.focused.flatMap { state.key(of: $0) }.flatMap { isShown($0) ? $0 : nil }
         let current = emptyFocus.display.map(workspaceMap.number(on:)) ?? (focusedKey ?? pointerKey())?.virtual
         let report = WorkspaceReport.build(
-            map: workspaceMap, displays: displays.map(\.uuid), focused: current, appsByNumber: appsByNumber)
+            map: workspaceMap,
+            displays: WorkspaceReport.monitorOrder(screens: displays.map(\.uuid), managed: spaces.displayOrder()),
+            focused: current, appsByNumber: appsByNumber)
         guard report != lastPublishedReport else { return }
         lastPublishedReport = report
         if let data = try? JSONEncoder().encode(report) {

@@ -172,7 +172,7 @@ $TERRAZZO list-windows --workspace 3 --format '%{app-name}'
 $TERRAZZO workspace 3
 ```
 
-Floating windows and excluded apps belong to no workspace, so they aren't listed. Combine this with `onWorkspaceChange` to refresh a bar when workspaces change.
+Monitors are numbered in Mission Control's order, the same as SketchyBar's `arrangement-id`, so `--monitor <n>` and `%{monitor-appkit-nsscreen-screens-id}` can go straight into `display=<n>`. Floating windows and excluded apps belong to no workspace, so they aren't listed. Combine this with `onWorkspaceChange` to refresh a bar when workspaces change.
 
 ## Development
 

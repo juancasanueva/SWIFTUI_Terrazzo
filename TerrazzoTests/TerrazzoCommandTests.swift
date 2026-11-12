@@ -47,6 +47,26 @@ struct TerrazzoCommandTests {
         #expect(lines == ["1 1", "3 1", "7 2"])
     }
 
+    @Test func monitorsAreNumberedInMissionControlOrderLikeSketchyBar() {
+        // NSScreen lists built-in, LG, Samsung; Mission Control lists built-in, Samsung, LG.
+        let order = WorkspaceReport.monitorOrder(
+            screens: ["builtin", "lg", "samsung"], managed: ["builtin", "samsung", "lg"])
+        #expect(order == ["builtin", "samsung", "lg"])
+
+        var map = VirtualWorkspaces()
+        map.sync(displays: order)
+        _ = map.show(4, focusedDisplay: "samsung", isEmpty: true)
+        _ = map.show(7, focusedDisplay: "lg", isEmpty: true)
+        let report = WorkspaceReport.build(map: map, displays: order, focused: nil, appsByNumber: [:])
+        #expect(report.workspaces.first { $0.number == 4 }?.monitor == 2)
+        #expect(report.workspaces.first { $0.number == 7 }?.monitor == 3)
+    }
+
+    @Test func screensMissionControlDoesNotListKeepTheirOrderAfterTheOthers() {
+        #expect(WorkspaceReport.monitorOrder(screens: ["a", "b", "c"], managed: []) == ["a", "b", "c"])
+        #expect(WorkspaceReport.monitorOrder(screens: ["a", "b", "c"], managed: ["c", "gone"]) == ["c", "a", "b"])
+    }
+
     @Test func filtersByMonitor() throws {
         #expect(try output(["list-workspaces", "--monitor", "2"]) == ["7"])
     }
