@@ -94,6 +94,34 @@ struct ConfigTests {
         #expect(settings.windowsPerScreen == 3)
     }
 
+    @Test func aDisplayEdgesEntryCanNameJustOneSide() throws {
+        let url = try temporaryDirectory().appendingPathComponent("settings.json")
+        try Data(#"{"screenEdgesByDisplay": {"ABC": {"top": 50}}}"#.utf8).write(to: url)
+        let settings = try ConfigFile(url: url, defaults: AppSettings()).load()
+        #expect(settings.screenEdgesByDisplay == ["ABC": ScreenEdges(top: 50)])
+    }
+
+    @Test func aScreenEntryCanLeaveOutItsSizes() throws {
+        let url = try temporaryDirectory().appendingPathComponent("screens.json")
+        try Data(#"{"screens": {"ABC#1": {"count": 2}}}"#.utf8).write(to: url)
+        let screens = try ConfigFile(url: url, defaults: ScreensFile()).load()
+        #expect(screens.screens == ["ABC#1": ScreenPreferences(count: 2)])
+    }
+
+    @Test func aScreenEntryCanGiveOnlyOneKindOfSize() throws {
+        let url = try temporaryDirectory().appendingPathComponent("screens.json")
+        try Data(#"{"screens": {"ABC#1": {"overrides": {"tracks": {"columns:2": [0.6, 0.4]}}}}}"#.utf8)
+            .write(to: url)
+        let screens = try ConfigFile(url: url, defaults: ScreensFile()).load()
+        #expect(screens.screens["ABC#1"]?.overrides == SizeOverrides(tracks: ["columns:2": [0.6, 0.4]]))
+    }
+
+    @Test func aWrongTypeInsideAnEntryIsStillMalformed() throws {
+        let url = try temporaryDirectory().appendingPathComponent("settings.json")
+        try Data(#"{"screenEdgesByDisplay": {"ABC": {"top": "high"}}}"#.utf8).write(to: url)
+        #expect(throws: (any Error).self) { try ConfigFile(url: url, defaults: AppSettings()).load() }
+    }
+
     @Test func savedFileIsReadableJSONAndRoundTrips() throws {
         let url = try temporaryDirectory().appendingPathComponent("nested/settings.json")
         let file = ConfigFile(url: url, defaults: AppSettings())

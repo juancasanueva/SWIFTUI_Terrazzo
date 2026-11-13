@@ -20,6 +20,18 @@ struct ScreenEdges: Codable, Equatable, Sendable {
     var right: CGFloat = 0
 }
 
+extension ScreenEdges {
+    /// Entries for one display aren't in the defaults the file is merged with, so sides left out are filled here.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        top = try container.decodeIfPresent(CGFloat.self, forKey: .top) ?? top
+        left = try container.decodeIfPresent(CGFloat.self, forKey: .left) ?? left
+        bottom = try container.decodeIfPresent(CGFloat.self, forKey: .bottom) ?? bottom
+        right = try container.decodeIfPresent(CGFloat.self, forKey: .right) ?? right
+    }
+}
+
 /// `~/.config/terrazzo/settings.json`
 struct AppSettings: Codable, Equatable, Sendable {
     struct NoPeek: Codable, Equatable, Sendable {
@@ -125,6 +137,17 @@ struct ScreenPreferences: Codable, Equatable, Sendable {
     var kind: LayoutKind?
     var count: Int?
     var overrides = SizeOverrides()
+}
+
+extension ScreenPreferences {
+    /// A screen's entry isn't in the defaults the file is merged with, so keys left out are filled here.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        kind = try container.decodeIfPresent(LayoutKind.self, forKey: .kind)
+        count = try container.decodeIfPresent(Int.self, forKey: .count)
+        overrides = try container.decodeIfPresent(SizeOverrides.self, forKey: .overrides) ?? overrides
+    }
 }
 
 struct ScreensFile: Codable, Equatable, Sendable {

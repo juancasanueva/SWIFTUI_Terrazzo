@@ -56,6 +56,16 @@ struct SizeOverrides: Codable, Equatable, Sendable {
     var isEmpty: Bool { tracks.isEmpty && cells.isEmpty }
 }
 
+extension SizeOverrides {
+    /// Read from inside a screen's entry in `screens.json`, where either kind of size can be left out.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        tracks = try container.decodeIfPresent([String: [CGFloat]].self, forKey: .tracks) ?? tracks
+        cells = try container.decodeIfPresent([String: [[CGFloat]]].self, forKey: .cells) ?? cells
+    }
+}
+
 struct EdgeDeltas: Equatable, Sendable {
     var minX: CGFloat = 0
     var maxX: CGFloat = 0
