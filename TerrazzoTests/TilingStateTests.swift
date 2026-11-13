@@ -363,6 +363,36 @@ struct TilingStateTests {
         #expect(tiles(state) == [[1], [2]])
     }
 
+    /// A context where the left display shows another Space, so `left` has no area.
+    private func contextWithLeftOnAnotherSpace(oneScreen: Bool = true) -> TilingContext {
+        var screens = [ScreenGeometry(key: WorkspaceKey(display: "L", space: 2), area: leftArea)]
+        if !oneScreen { screens.append(ScreenGeometry(key: right, area: rightArea)) }
+        return TilingContext(screens: screens, policy: TilingPolicy(gap: 0), minimumSize: { _ in .zero })
+    }
+
+    @Test func swappingOnASpaceThatIsNotShowingDoesNothing() {
+        var state = filled([1, 2])
+        let ctx = contextWithLeftOnAnotherSpace()
+        let notices = state.moveOrSwap(1, direction: .right, context: ctx)
+        #expect(notices.isEmpty)
+        #expect(tiles(state) == [[1], [2]])
+        #expect(tiles(state, ctx.screens[0].key).isEmpty)
+    }
+
+    @Test func movingFromASpaceThatIsNotShowingToAFullScreenDoesNothing() {
+        let shown = context(oneScreen: false)
+        var state = filled([1], context: shown)
+        _ = state.reconcile(
+            Snapshot(
+                windows: [ObservedWindow(id: 1, app: "app", key: left, frame: .zero)]
+                    + [5, 6, 7].map { ObservedWindow(id: $0, app: "app", key: right, frame: .zero) },
+                minimized: [], focused: nil), context: shown)
+        let notices = state.moveToScreen(1, target: right, context: contextWithLeftOnAnotherSpace(oneScreen: false))
+        #expect(notices.isEmpty)
+        #expect(tiles(state) == [[1]])
+        #expect(tiles(state, right) == [[5], [6], [7]])
+    }
+
     @Test func aFullTargetScreenSwapsOrStacksByPolicy() {
         var ctx = context(oneScreen: false)
         var state = filled([1], context: ctx)

@@ -515,7 +515,9 @@ struct TilingState: Equatable {
             let tile = workspace.tiles.firstIndex(where: { $0.windows.contains(id) })
         else { return [] }
         let frames = slotFrames(on: key, context: context)
-        if let neighbor = Self.neighbor(of: frames[tile], in: frames, direction: direction) {
+        // A workspace on a Space that isn't showing has no frames: there is nothing to swap or move.
+        guard let frame = frames[safe: tile] else { return [] }
+        if let neighbor = Self.neighbor(of: frame, in: frames, direction: direction) {
             swap(id, with: workspace.tiles[neighbor].windows[0], context: context)
             return []
         }
@@ -538,7 +540,7 @@ struct TilingState: Equatable {
         guard let app = apps[id] else { return [] }
         if isFull(target, context: context) {
             let frames = slotFrames(on: target, context: context)
-            let source = slotFrames(on: key, context: context)[tile]
+            guard let source = slotFrames(on: key, context: context)[safe: tile] else { return [] }
             let center = CGPoint(x: source.midX, y: source.midY)
             guard let nearest = frames.indices.min(by: {
                 Self.distance(frames[$0], center) < Self.distance(frames[$1], center)
