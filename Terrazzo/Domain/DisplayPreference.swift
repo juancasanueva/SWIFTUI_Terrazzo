@@ -91,3 +91,19 @@ struct DisplayPreference: Codable, Equatable, Sendable, ExpressibleByStringLiter
         return displays.first { $0.name.range(of: name, options: .caseInsensitive) != nil }
     }
 }
+
+/// How the settings window edits a preference: the display asked for, then what to use without it.
+extension DisplayPreference {
+    var primary: String { candidates.first ?? "" }
+
+    var fallbacks: [String] { Array(candidates.dropFirst()) }
+
+    /// Nil for no display at all, which is "Any display".
+    func choosing(primary: String) -> DisplayPreference? {
+        primary.isEmpty ? nil : DisplayPreference([primary] + fallbacks)
+    }
+
+    func choosing(fallbacks: [String]) -> DisplayPreference {
+        DisplayPreference(candidates.prefix(1) + fallbacks)
+    }
+}

@@ -138,23 +138,54 @@ private struct LayoutSettings: View {
         .formStyle(.grouped)
     }
 
+    @ViewBuilder
     private func workspacePicker(_ number: Int) -> some View {
         let key = String(number)
-        let candidates = controller.settings.workspaceDisplays[key]?.candidates ?? []
-        let selection = Binding<String>(
-            get: { candidates.first ?? "" },
-            set: {
-                controller.settings.workspaceDisplays[key] =
-                    $0.isEmpty ? nil : DisplayPreference([$0] + candidates.dropFirst())
-            })
-        var names = Displays.current().map(\.name)
-        // A pin can be part of a name, or name a monitor that isn't connected: keep it selectable.
-        if !selection.wrappedValue.isEmpty, !names.contains(selection.wrappedValue) {
-            names.append(selection.wrappedValue)
-        }
-        return Picker(String(localized: "Workspace \(number)"), selection: selection) {
+        let preference = controller.settings.workspaceDisplays[key] ?? DisplayPreference([])
+        let primary = Binding<String>(
+            get: { preference.primary },
+            set: { controller.settings.workspaceDisplays[key] = preference.choosing(primary: $0) })
+        let fallbacks = Binding<[String]>(
+            get: { preference.fallbacks },
+            set: { controller.settings.workspaceDisplays[key] = preference.choosing(fallbacks: $0) })
+        Picker(String(localized: "Workspace \(number)"), selection: primary) {
             Text("Any display").tag("")
-            ForEach(names, id: \.self) { Text($0).tag($0) }
+            ForEach(displayChoices(keeping: preference.primary), id: \.self) { Text(Self.title($0)).tag($0) }
+        }
+        if !preference.primary.isEmpty {
+            Picker("If not connected", selection: fallbacks) {
+                Text("Any display").tag([String]())
+                ForEach(fallbackChoices(for: preference), id: \.self) { choice in
+                    Text(choice.map(Self.title).joined(separator: ", ")).tag(choice)
+                }
+            }
+        }
+    }
+
+    /// The built-in display goes by role, so the choice holds in any language; the others go by name.
+    private func displayChoices(keeping current: String) -> [String] {
+        var choices = [DisplayPreference.builtIn] + Displays.current().filter { !$0.isBuiltIn }.map(\.name)
+        // A pin can be part of a name, or name a monitor that isn't connected: keep it selectable.
+        if !current.isEmpty, !choices.contains(current) { choices.append(current) }
+        return choices
+    }
+
+    private func fallbackChoices(for preference: DisplayPreference) -> [[String]] {
+        var choices = [DisplayPreference.builtIn, DisplayPreference.external]
+            .filter { $0 != preference.primary }
+            .map { [$0] }
+        // A longer list written in the config by hand stays selectable.
+        if !preference.fallbacks.isEmpty, !choices.contains(preference.fallbacks) {
+            choices.append(preference.fallbacks)
+        }
+        return choices
+    }
+
+    private static func title(_ candidate: String) -> String {
+        switch candidate {
+        case DisplayPreference.builtIn: String(localized: "Built-in display")
+        case DisplayPreference.external: String(localized: "Any external display")
+        default: candidate
         }
     }
 

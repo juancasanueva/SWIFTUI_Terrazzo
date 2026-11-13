@@ -372,6 +372,21 @@ struct VirtualWorkspacesTests {
         #expect(displays?["4"] as? [String] == ["Odyssey G5", "@external"])
     }
 
+    @Test func choosingAFallbackSavesAListAndRemovingItSavesAStringAgain() throws {
+        let encoder = JSONEncoder()
+        let pinned: DisplayPreference = "Odyssey G5"
+        let withFallback = pinned.choosing(fallbacks: ["@external"])
+        #expect(String(decoding: try encoder.encode(withFallback), as: UTF8.self) == #"["Odyssey G5","@external"]"#)
+        let without = withFallback.choosing(fallbacks: [])
+        #expect(String(decoding: try encoder.encode(without), as: UTF8.self) == #""Odyssey G5""#)
+    }
+
+    @Test func choosingAnotherDisplayKeepsTheFallbackAndAnyDisplayClearsIt() {
+        let preference: DisplayPreference = ["Odyssey G5", "@external"]
+        #expect(preference.choosing(primary: "LG ULTRAWIDE") == ["LG ULTRAWIDE", "@external"])
+        #expect(preference.choosing(primary: "") == nil)
+    }
+
     // MARK: Windows
 
     @Test func mergingBringsAWorkspacesWindowsToItsDisplay() {

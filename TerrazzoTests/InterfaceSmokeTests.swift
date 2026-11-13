@@ -201,6 +201,15 @@ struct InterfaceSmokeTests {
         let spanish = Bundle(for: AppController.self).path(forResource: "es", ofType: "lproj").flatMap(Bundle.init(path:))
         #expect(spanish?.localizedString(forKey: "This Space is full", value: nil, table: nil) == "Este Espacio está lleno")
     }
+
+    @Test func theFallbackDisplayChoicesAreTranslated() {
+        let spanish = Bundle(for: AppController.self).path(forResource: "es", ofType: "lproj").flatMap(Bundle.init(path:))
+        #expect(spanish?.localizedString(forKey: "If not connected", value: nil, table: nil) == "Si no está conectada")
+        #expect(spanish?.localizedString(forKey: "Built-in display", value: nil, table: nil) == "Pantalla integrada")
+        #expect(
+            spanish?.localizedString(forKey: "Any external display", value: nil, table: nil)
+                == "Cualquier pantalla externa")
+    }
 }
 
 @MainActor
