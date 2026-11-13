@@ -163,8 +163,15 @@ struct ScreensFile: Codable, Equatable, Sendable {
         "\(key.display)#workspace#\(key.virtual)"
     }
 
+    /// For a workspace being set up: its own entry, or the last one saved for its display and number.
     func preferences(for key: WorkspaceKey) -> ScreenPreferences? {
         screens[Self.id(key)] ?? screens[Self.fallbackID(key)]
+    }
+
+    /// For a workspace already laid out: only its own entry, so saving another Space's layout on the same
+    /// display doesn't change this one.
+    func ownPreferences(for key: WorkspaceKey) -> ScreenPreferences? {
+        screens[Self.id(key)]
     }
 
     mutating func set(_ preferences: ScreenPreferences, for key: WorkspaceKey) {

@@ -404,7 +404,7 @@ final class AppController {
     private func applyScreenPreferencesToWorkspaces() {
         var changed = false
         for key in state.workspaces.keys {
-            guard let stored = screens.preferences(for: key), var workspace = state.workspaces[key] else {
+            guard let stored = screens.ownPreferences(for: key), var workspace = state.workspaces[key] else {
                 continue
             }
             if workspace.kind != stored.kind || workspace.count != stored.count
@@ -1045,7 +1045,7 @@ final class AppController {
 
     private func persistCount(_ key: WorkspaceKey) {
         guard let workspace = state.workspaces[key] else { return }
-        let stored = screens.screens[ScreensFile.id(key)]
+        let stored = screens.ownPreferences(for: key)
         if stored?.count != workspace.count || stored?.kind != workspace.kind { saveScreenPreferences(key) }
     }
 

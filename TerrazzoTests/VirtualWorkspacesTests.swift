@@ -632,6 +632,17 @@ struct VirtualWorkspacesTests {
         #expect(file.preferences(for: other) == ScreenPreferences(kind: .rows, count: 3))
     }
 
+    @Test func aSpaceAlreadyLaidOutIsNotGivenAnotherSpacesLayout() {
+        var file = ScreensFile()
+        let other = WorkspaceKey(display: "A", space: 2, virtual: 3)
+        let saved = ScreenPreferences(kind: .columns, count: 2)
+        file.set(saved, for: three)
+        #expect(file.ownPreferences(for: three) == saved)
+        #expect(file.ownPreferences(for: other) == nil)
+        // A Space seen for the first time still starts from the display's last layout.
+        #expect(file.preferences(for: other) == saved)
+    }
+
     @Test func fallbackIdDoesNotCollideWithSpaceIds() {
         #expect(ScreensFile.fallbackID(one) != ScreensFile.id(one))
         #expect(ScreensFile.fallbackID(three) == "A#workspace#3")
