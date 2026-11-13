@@ -20,6 +20,52 @@ struct TerrazzoCommandTests {
     @Test func noArgumentsStartsTheApp() {
         #expect(TerrazzoCommand.parse([]) == nil)
         #expect(TerrazzoCommand.parse(["-NSDocumentRevisionsDebugMode", "YES"]) == nil)
+        #expect(TerrazzoCommand.parse(["-psn_0_123456"]) == nil)
+        #expect(TerrazzoCommand.parse(["-AppleLanguages", "(es)"]) == nil)
+    }
+
+    @Test(arguments: ["--help", "-h"])
+    func helpPrintsTheUsage(flag: String) throws {
+        let parsed = try #require(TerrazzoCommand.parse([flag]))
+        #expect(try parsed.get() == .help)
+        let lines = try output([flag])
+        #expect(lines == TerrazzoCommand.usage.components(separatedBy: "\n"))
+        #expect(lines.contains("  terrazzo --help"))
+        #expect(lines.contains("  terrazzo --version"))
+    }
+
+    /// People put a symlink to the binary on their PATH; `Bundle.main` is then the symlink's folder.
+    @Test func theVersionIsReadFromTheAppASymlinkPointsTo() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let contents = root.appendingPathComponent("Terrazzo.app/Contents")
+        try FileManager.default.createDirectory(
+            at: contents.appendingPathComponent("MacOS"), withIntermediateDirectories: true)
+        let plist: [String: Any] = [
+            "CFBundleIdentifier": "test.terrazzo.\(UUID().uuidString)", "CFBundleExecutable": "Terrazzo",
+            "CFBundlePackageType": "APPL", "CFBundleShortVersionString": "9.8.7",
+        ]
+        try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            .write(to: contents.appendingPathComponent("Info.plist"))
+        let binary = contents.appendingPathComponent("MacOS/Terrazzo")
+        try Data().write(to: binary)
+        let bin = root.appendingPathComponent("bin")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        let link = bin.appendingPathComponent("terrazzo")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: binary)
+
+        let info = TerrazzoCommandLine.appInfo(executable: link)
+        #expect(TerrazzoCommand.versionLine(info) == "Terrazzo 9.8.7")
+        #expect(TerrazzoCommand.versionLine(TerrazzoCommandLine.appInfo(executable: binary)) == "Terrazzo 9.8.7")
+        #expect(TerrazzoCommandLine.appInfo(executable: nil) == nil)
+    }
+
+    @Test(arguments: ["--version", "-v"])
+    func versionPrintsTheAppVersion(flag: String) throws {
+        let parsed = try #require(TerrazzoCommand.parse([flag]))
+        #expect(try parsed.get() == .version)
+        #expect(TerrazzoCommand.versionLine(["CFBundleShortVersionString": "1.0.15"]) == "Terrazzo 1.0.15")
+        #expect(TerrazzoCommand.versionLine(nil) == "Terrazzo")
     }
 
     @Test func anUnknownWordIsAnErrorRatherThanStartingTheApp() throws {
@@ -93,6 +139,7 @@ struct TerrazzoCommandTests {
         ["workspace"], ["workspace", "0"], ["workspace", "10"], ["workspace", "x"], ["list-workspaces"],
         ["list-workspaces", "--nope"], ["list-workspaces", "--monitor"], ["list-windows"],
         ["list-windows", "--workspace", "x"], ["list-windows", "--format", "%{app-name}"],
+        ["--nope"], ["--all"], ["--help", "list-workspaces"], ["--version", "2"],
     ])
     func badArgumentsAreErrors(arguments: [String]) throws {
         let parsed = try #require(TerrazzoCommand.parse(arguments))

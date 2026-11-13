@@ -170,7 +170,11 @@ $TERRAZZO list-workspaces --focused
 $TERRAZZO list-workspaces --monitor all --format '%{workspace} %{monitor-appkit-nsscreen-screens-id}'
 $TERRAZZO list-windows --workspace 3 --format '%{app-name}'
 $TERRAZZO workspace 3
+$TERRAZZO --help
+$TERRAZZO --version
 ```
+
+Any other argument starting with `--` prints the usage and exits with status 2, without starting the app.
 
 Monitors are numbered in Mission Control's order, the same as SketchyBar's `arrangement-id`, so `--monitor <n>` and `%{monitor-appkit-nsscreen-screens-id}` can go straight into `display=<n>`. Floating windows and excluded apps belong to no workspace, so they aren't listed. Combine this with `onWorkspaceChange` to refresh a bar when workspaces change.
 

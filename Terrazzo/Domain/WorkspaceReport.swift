@@ -53,18 +53,33 @@ enum TerrazzoCommand: Equatable {
     case listWorkspaces(Selection, format: String)
     case listWindows(workspace: Int, format: String)
     case switchTo(Int)
+    case help
+    case version
 
     static let usage = """
         usage:
           terrazzo list-workspaces (--all | --focused | --monitor <n|all>) [--format <text>]
           terrazzo list-windows --workspace <1-9> [--format <text>]
           terrazzo workspace <1-9>
+          terrazzo --help
+          terrazzo --version
         """
 
     /// Nil when the arguments aren't a command, which means start the app.
     static func parse(_ arguments: [String]) -> Result<TerrazzoCommand, UsageError>? {
-        // Options starting with a dash come from macOS or Xcode when launching the app.
-        guard let name = arguments.first, !name.hasPrefix("-") else { return nil }
+        guard let name = arguments.first else { return nil }
+        switch name {
+        case "--help", "-h":
+            return arguments.count == 1 ? .success(.help) : .failure(error())
+        case "--version", "-v":
+            return arguments.count == 1 ? .success(.version) : .failure(error())
+        default:
+            break
+        }
+        // macOS and Xcode launch the app with options of one dash, such as `-psn_0_123` or
+        // `-NSDocumentRevisionsDebugMode YES`. Two dashes are a mistyped command.
+        if name.hasPrefix("--") { return .failure(error()) }
+        guard !name.hasPrefix("-") else { return nil }
         guard ["list-workspaces", "list-windows", "workspace"].contains(name) else { return .failure(error()) }
         let rest = Array(arguments.dropFirst())
         switch name {
@@ -142,9 +157,17 @@ enum TerrazzoCommand: Equatable {
         case .listWindows(let workspace, let format):
             let apps = report.workspaces.first { $0.number == workspace }?.apps ?? []
             return apps.map { format.replacingOccurrences(of: "%{app-name}", with: $0) }
-        case .switchTo:
+        case .help:
+            return Self.usage.components(separatedBy: "\n")
+        case .switchTo, .version:
             return []
         }
+    }
+
+    /// What `--version` prints, from the app's Info.plist.
+    static func versionLine(_ info: [String: Any]?) -> String {
+        guard let version = info?["CFBundleShortVersionString"] as? String, !version.isEmpty else { return "Terrazzo" }
+        return "Terrazzo \(version)"
     }
 
     /// The configured program and arguments, with `{workspace}` filled in.

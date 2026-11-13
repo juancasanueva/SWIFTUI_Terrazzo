@@ -14,6 +14,9 @@ enum TerrazzoCommandLine {
         switch parsed {
         case .failure(let error):
             fail(error.message, code: 2)
+        case .success(.version):
+            let info = appInfo(executable: Bundle.main.executableURL) ?? Bundle.main.infoDictionary
+            print(TerrazzoCommand.versionLine(info))
         case .success(.switchTo(let number)):
             let others = NSRunningApplication.runningApplications(
                 withBundleIdentifier: Bundle.main.bundleIdentifier ?? "com.juancasanueva.terrazzo")
@@ -28,6 +31,15 @@ enum TerrazzoCommandLine {
             for line in command.output(from: report) { print(line) }
         }
         return true
+    }
+
+    /// The Info.plist of the app holding the binary. Run through a symlink, as from a folder on the
+    /// PATH, `Bundle.main` is the symlink's folder and knows no version.
+    static func appInfo(executable: URL?) -> [String: Any]? {
+        guard let executable else { return nil }
+        let app = executable.resolvingSymlinksInPath()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        return Bundle(url: app)?.infoDictionary
     }
 
     private static func fail(_ message: String, code: Int32) -> Never {
