@@ -158,8 +158,9 @@ final class OverlayCenter {
             let curtain = curtains[display.uuid] ?? CurtainPanel()
             curtains[display.uuid] = curtain
             curtain.configure(mode: mode, frame: display.frame)
-            if let clean, let lowest = clean.first {
-                for id in clean { model.state.apps[id].map { _ in AppController.shared.ax.raise(id) } }
+            let raising = CleanSpaceOrder.raising(clean ?? [], focused: model.focused)
+            if let lowest = raising.first {
+                for id in raising { model.state.apps[id].map { _ in AppController.shared.ax.raise(id) } }
                 curtain.order(.below, relativeTo: Int(lowest))
             } else if clean != nil {
                 curtain.orderFrontRegardless()
