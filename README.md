@@ -142,7 +142,7 @@ Settings are plain JSON in `~/.config/terrazzo/`, or `$XDG_CONFIG_HOME/terrazzo/
 | `highlight.cornerRadius` | Corner radius of the windows being outlined. Standard windows measure about 16 |
 | `stackBar.hoverDelay` | Seconds resting on a bar before the panel opens, 0 to 10 |
 | `followMovedWindow` | Moving a window to another workspace also goes there, with that window focused. On by default |
-| `workspaceDisplays` | Workspace number to the monitor it shows on: part of a monitor's name, `@builtin` for the Mac's own screen or `@external` for any other monitor. A list such as `["Odyssey", "@external"]` uses the first one that is connected, so the same file works with different monitors. With several external monitors, `@external` prefers one that no workspace names, then the leftmost. Versions up to 1.0.13 can't read a list and keep their last good settings |
+| `workspaceDisplays` | Workspace number to the monitor it shows on: part of a monitor's name, `@builtin` for the Mac's own screen or `@external` for any other monitor. A list such as `["Odyssey", "@external"]` uses the first one that is connected, so the same file works with different monitors. With several external monitors, `@external` prefers one that no workspace names, then the leftmost. A workspace set to the built-in screen's full name is rewritten as `@builtin` when the file loads. Versions up to 1.0.13 can't read a list and keep their last good settings |
 | `screenEdges` | Space to keep clear on every screen, for bars from other apps. `screenEdgesByDisplay` does it for one display, by its UUID |
 | `onWorkspaceChange` | A program and arguments to run when workspaces change. It runs without a shell, and `{workspace}` becomes the current number |
 

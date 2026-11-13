@@ -387,6 +387,25 @@ struct VirtualWorkspacesTests {
         #expect(preference.choosing(primary: "") == nil)
     }
 
+    @Test func aWorkspaceAskingForTheBuiltInScreenByNameAsksForItByRole() {
+        var settings = AppSettings()
+        settings.gap = 12
+        settings.workspaceDisplays = [
+            "1": "Built-in Retina Display", "4": ["Odyssey G5", "Built-in Retina Display"], "7": "LG",
+        ]
+        var expected = settings
+        expected.workspaceDisplays = ["1": "@builtin", "4": ["Odyssey G5", "@builtin"], "7": "LG"]
+        #expect(settings.namingBuiltInDisplayByRole("Built-in Retina Display") == expected)
+    }
+
+    @Test func otherDisplayNamesAreLeftAsWritten() {
+        var settings = AppSettings()
+        settings.workspaceDisplays = ["1": "Built-in", "2": "Pantalla Retina integrada", "7": ["LG", "@external"]]
+        #expect(settings.namingBuiltInDisplayByRole("Built-in Retina Display") == settings)
+        #expect(settings.namingBuiltInDisplayByRole(nil) == settings)
+        #expect(settings.namingBuiltInDisplayByRole("") == settings)
+    }
+
     // MARK: Windows
 
     @Test func mergingBringsAWorkspacesWindowsToItsDisplay() {

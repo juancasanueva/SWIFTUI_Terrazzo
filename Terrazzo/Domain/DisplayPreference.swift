@@ -107,3 +107,16 @@ extension DisplayPreference {
         DisplayPreference(candidates.prefix(1) + fallbacks)
     }
 }
+
+extension AppSettings {
+    /// These settings with the built-in display named by role wherever a workspace asks for it by its
+    /// full name. macOS reports that name in the language in use, so it stops matching when that changes.
+    func namingBuiltInDisplayByRole(_ name: String?) -> AppSettings {
+        guard let name, !name.isEmpty else { return self }
+        var updated = self
+        updated.workspaceDisplays = workspaceDisplays.mapValues { preference in
+            DisplayPreference(preference.candidates.map { $0 == name ? DisplayPreference.builtIn : $0 })
+        }
+        return updated
+    }
+}

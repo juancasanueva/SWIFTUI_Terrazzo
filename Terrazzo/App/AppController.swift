@@ -257,7 +257,6 @@ final class AppController {
 
     private func reloadConfig() {
         isLoadingConfig = true
-        defer { isLoadingConfig = false }
         var problems: [String] = []
         func load<Value>(_ file: ConfigFile<Value>, into apply: (Value) -> Void) {
             do {
@@ -277,6 +276,12 @@ final class AppController {
             if let message {
                 overlays.showNotice(String(localized: "\(message) has an error. Keeping the last good values."))
             }
+        }
+        isLoadingConfig = false
+        // Saved, so the file stops depending on the language macOS names the built-in display in.
+        // A file with an error is left for the user to fix.
+        if !problems.contains(settingsFile.url.lastPathComponent) {
+            settings = settings.namingBuiltInDisplayByRole(Displays.current().first(where: \.isBuiltIn)?.name)
         }
     }
 
