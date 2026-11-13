@@ -313,6 +313,23 @@ struct ConfigTests {
         #expect(map.combo(for: .tabViewBackward)?.symbols == "⇧⌘E")
     }
 
+    @Test func tabViewOpenedBackwardIsHeldByItsOwnShortcutsModifiers() {
+        var map = ShortcutMap()
+        map.bindings[ShortcutAction.tabViewBackward.rawValue] = "opt+tab"
+        #expect(map.tabViewHeldModifiers(openedBackward: true) == .option)
+        #expect(map.tabViewHeldModifiers(openedBackward: false) == .control)
+    }
+
+    @Test func tabViewIsHeldByTheSameModifiersWhenBackwardFollowsForward() {
+        var map = ShortcutMap()
+        // Shift only tells backward from forward, so it isn't a key to keep holding.
+        #expect(map.tabViewHeldModifiers(openedBackward: true) == .control)
+        #expect(map.tabViewHeldModifiers(openedBackward: false) == .control)
+        map.bindings[ShortcutAction.tabView.rawValue] = "cmd+e"
+        #expect(map.tabViewHeldModifiers(openedBackward: true) == .command)
+        #expect(map.tabViewHeldModifiers(openedBackward: false) == .command)
+    }
+
     @Test func turningOffTabViewAlsoTurnsOffItsBackwardShortcut() {
         var map = ShortcutMap()
         map.bindings[ShortcutAction.tabView.rawValue] = ShortcutMap.off

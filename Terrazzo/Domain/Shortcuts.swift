@@ -267,6 +267,16 @@ struct ShortcutMap: Codable, Equatable, Sendable {
         return KeyCombo(key: suffix.key, modifiers: prefix.modifiers.union(suffix.extra))
     }
 
+    /// The modifiers that keep Tab View open, and that its arrow, Return and Escape keys use: those of the
+    /// shortcut that opened it.
+    func tabViewHeldModifiers(openedBackward: Bool) -> KeyModifiers {
+        let forward = combo(for: .tabView)?.modifiers ?? .control
+        guard openedBackward, let backward = combo(for: .tabViewBackward)?.modifiers else { return forward }
+        // Shift only tells backward from forward, so it isn't a key to keep holding.
+        let held = backward.subtracting(.shift)
+        return held.isEmpty ? backward : held
+    }
+
     /// The shortcuts to register with the system right now.
     var active: [ShortcutAction: KeyCombo] {
         guard enabled else { return [:] }

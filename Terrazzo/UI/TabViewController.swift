@@ -62,7 +62,8 @@ final class TabViewController {
         model.selection = (recent.count > 1 ? recent[1] : recent.first) ?? ordered[0].id
         model.onChoose = { [weak self] id in self?.commit(id) }
 
-        heldModifiers = Self.flags(controller.shortcuts.combo(for: .tabView)?.modifiers ?? .control)
+        let modifiers = controller.shortcuts.tabViewHeldModifiers(openedBackward: backward)
+        heldModifiers = Self.flags(modifiers)
         let panel = self.panel ?? makePanel()
         self.panel = panel
         let display =
@@ -76,8 +77,7 @@ final class TabViewController {
 
         // The panel never takes keyboard focus, so the active app keeps it until the user switches.
         controller.hotKeys.registerTemporary(
-            [.left, .right, .up, .down, .return, .escape],
-            modifiers: controller.shortcuts.combo(for: .tabView)?.modifiers ?? .control
+            [.left, .right, .up, .down, .return, .escape], modifiers: modifiers
         ) { [weak self] key in self?.handle(key) }
         releaseTimer = Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.checkRelease() }
