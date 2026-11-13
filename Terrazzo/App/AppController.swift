@@ -36,6 +36,7 @@ final class AppController {
     @ObservationIgnored private var layoutSaveScheduled = false
     @ObservationIgnored private let watcher = ConfigWatcher()
     @ObservationIgnored private var isLoadingConfig = false
+    @ObservationIgnored private var builtInRename = BuiltInDisplayRename()
 
     /// Becomes the real updater in `start()`.
     var updater: any AppUpdating = NoUpdater()
@@ -265,7 +266,13 @@ final class AppController {
                 problems.append(file.url.lastPathComponent)
             }
         }
-        load(settingsFile) { settings = $0 }
+        // The built-in display goes by role from here on, whether or not the file can be rewritten.
+        let builtIn = Displays.current().first(where: \.isBuiltIn)?.name
+        var renamed: AppSettings?
+        load(settingsFile) { loaded in
+            settings = loaded.namingBuiltInDisplayByRole(builtIn)
+            renamed = builtInRename.settingsToSave(loaded: loaded, builtInName: builtIn)
+        }
         load(shortcutsFile) { shortcuts = $0 }
         load(rulesFile) { rules = $0 }
         load(screensFile) { screens = $0 }
@@ -279,10 +286,7 @@ final class AppController {
         }
         isLoadingConfig = false
         // Saved, so the file stops depending on the language macOS names the built-in display in.
-        // A file with an error is left for the user to fix.
-        if !problems.contains(settingsFile.url.lastPathComponent) {
-            settings = settings.namingBuiltInDisplayByRole(Displays.current().first(where: \.isBuiltIn)?.name)
-        }
+        if let renamed { save(renamed, to: settingsFile) }
     }
 
     private func save<Value>(_ value: Value, to file: ConfigFile<Value>) {

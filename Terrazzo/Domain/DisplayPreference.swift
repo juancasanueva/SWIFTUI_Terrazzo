@@ -120,3 +120,17 @@ extension AppSettings {
         return updated
     }
 }
+
+/// Decides when the built-in display's new name is written back to the settings file: once for each
+/// version of that file, so a file that can't be written doesn't bring its notice back on every reload.
+struct BuiltInDisplayRename {
+    private var lastLoaded: AppSettings?
+
+    /// The settings to save, or nil when the file needs no change or was already tried.
+    mutating func settingsToSave(loaded: AppSettings, builtInName: String?) -> AppSettings? {
+        let renamed = loaded.namingBuiltInDisplayByRole(builtInName)
+        guard renamed != loaded, loaded != lastLoaded else { return nil }
+        lastLoaded = loaded
+        return renamed
+    }
+}

@@ -463,6 +463,44 @@ struct VirtualWorkspacesTests {
         #expect(settings.namingBuiltInDisplayByRole("") == settings)
     }
 
+    @Test func theBuiltInRenameIsSavedOnceForEachVersionOfTheFile() {
+        var settings = AppSettings()
+        settings.workspaceDisplays = ["1": "Built-in Retina Display"]
+        var expected = settings
+        expected.workspaceDisplays = ["1": "@builtin"]
+        var rename = BuiltInDisplayRename()
+
+        #expect(rename.settingsToSave(loaded: settings, builtInName: "Built-in Retina Display") == expected)
+        // The save failed and the same file loads again: asking twice would repeat the notice.
+        #expect(rename.settingsToSave(loaded: settings, builtInName: "Built-in Retina Display") == nil)
+
+        settings.gap = 20
+        expected.gap = 20
+        #expect(rename.settingsToSave(loaded: settings, builtInName: "Built-in Retina Display") == expected)
+        #expect(rename.settingsToSave(loaded: expected, builtInName: "Built-in Retina Display") == nil)
+        #expect(rename.settingsToSave(loaded: AppSettings(), builtInName: nil) == nil)
+    }
+
+    @Test func namingTheBuiltInDisplayByRoleIsSavedOnceAndThenChangesNothing() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("settings.json")
+        try Data(#"{"gap": 12, "workspaceDisplays": {"1": "Built-in Retina Display", "7": ["LG", "@external"]}}"#.utf8)
+            .write(to: url)
+        let file = ConfigFile(url: url, defaults: AppSettings())
+
+        let loaded = try file.load()
+        let renamed = loaded.namingBuiltInDisplayByRole("Built-in Retina Display")
+        #expect(renamed.workspaceDisplays == ["1": "@builtin", "7": ["LG", "@external"]])
+        #expect(renamed.gap == 12)
+
+        try file.save(renamed)
+        let reloaded = try file.load()
+        #expect(reloaded == renamed)
+        #expect(reloaded.namingBuiltInDisplayByRole("Built-in Retina Display") == reloaded)
+    }
+
     // MARK: Windows
 
     @Test func mergingBringsAWorkspacesWindowsToItsDisplay() {
