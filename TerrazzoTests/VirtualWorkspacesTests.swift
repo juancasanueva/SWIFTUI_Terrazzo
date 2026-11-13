@@ -387,6 +387,63 @@ struct VirtualWorkspacesTests {
         #expect(preference.choosing(primary: "") == nil)
     }
 
+    @Test func choosingTheFallbackAsTheDisplayDoesNotRepeatIt() {
+        let preference: DisplayPreference = ["Odyssey G5", "@builtin"]
+        #expect(preference.choosing(primary: "@builtin") == "@builtin")
+    }
+
+    @Test func anyExternalDisplayTakesTheUpperOfTwoStackedDisplaysWhateverTheListOrder() {
+        func stacked(_ uuid: String, y: CGFloat) -> DisplayInfo {
+            let frame = CGRect(x: 0, y: y, width: 1920, height: 1080)
+            return DisplayInfo(uuid: uuid, name: "DELL \(uuid)", frame: frame, visibleFrame: frame)
+        }
+        let top = stacked("top", y: -1080)
+        let bottom = stacked("bottom", y: 1080)
+        for displays in [[mac, top, bottom], [bottom, top, mac], [top, mac, bottom]] {
+            #expect(VirtualWorkspaces.resolvePins(["5": "@external"], displays: displays) == [5: "top"])
+            #expect(
+                VirtualWorkspaces.resolvePins(["5": "@external", "6": "DELL top"], displays: displays)
+                    == [5: "bottom", 6: "top"])
+        }
+    }
+
+    @Test func aWorkspaceWithAnInvalidNumberDoesNotCountAsNamingADisplay() {
+        let displays = [display("lg", "LG ULTRAWIDE", x: -1920), mac, display("dell", "DELL S2721DS", x: 1512)]
+        let pins = VirtualWorkspaces.resolvePins(["5": "@external", "x": "LG", "12": "LG"], displays: displays)
+        #expect(pins == [5: "lg"])
+    }
+
+    @Test func aNumberWrittenTwiceKeepsTheSpellingThatMatchesADisplay() {
+        let displays = [display("lg", "LG ULTRAWIDE")]
+        #expect(VirtualWorkspaces.resolvePins(["1": "LG", "01": "Missing"], displays: displays) == [1: "lg"])
+        #expect(VirtualWorkspaces.resolvePins(["1": "Missing", "01": "LG"], displays: displays) == [1: "lg"])
+    }
+
+    @Test func emptyRepeatedAndUppercaseCandidatesResolveWithoutSurprises() {
+        let preferences: [String: DisplayPreference] = [
+            "1": [], "2": "", "3": ["", "@external"], "4": ["@builtin", "@builtin"], "5": "@Builtin", "6": "@EXTERNAL",
+        ]
+        let displays = [mac, display("dell", "DELL S2721DS", x: 1512)]
+        #expect(VirtualWorkspaces.resolvePins(preferences, displays: displays) == [3: "dell", 4: "mac", 5: "mac", 6: "dell"])
+        #expect(VirtualWorkspaces.resolvePins(preferences, displays: [mac]) == [4: "mac", 5: "mac"])
+    }
+
+    @Test(arguments: [
+        #"{"workspaceDisplays": {"4": 5}}"#, #"{"workspaceDisplays": {"4": null}}"#,
+        #"{"workspaceDisplays": {"4": ["a", 5]}}"#, #"{"workspaceDisplays": {"4": {"a": "b"}}}"#,
+    ])
+    func aDisplaySettingThatIsNeitherANameNorAListFailsTheLoad(json: String) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("settings.json")
+        try Data(json.utf8).write(to: url)
+        let file = ConfigFile(url: url, defaults: AppSettings())
+        #expect(throws: (any Error).self) { try file.load() }
+        #expect(throws: ConfigFileError.malformed) { try file.save(AppSettings()) }
+        #expect(try Data(contentsOf: url) == Data(json.utf8))
+    }
+
     @Test func aWorkspaceAskingForTheBuiltInScreenByNameAsksForItByRole() {
         var settings = AppSettings()
         settings.gap = 12

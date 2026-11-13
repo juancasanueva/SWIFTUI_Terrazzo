@@ -62,7 +62,8 @@ struct VirtualWorkspaces: Equatable {
         let named = Set(valid.flatMap { $0.preference.namedDisplays(among: displays) })
         var pins: [Int: String] = [:]
         for entry in valid {
-            pins[entry.number] = entry.preference.display(among: displays, named: named)?.uuid
+            guard let display = entry.preference.display(among: displays, named: named) else { continue }
+            pins[entry.number] = display.uuid
         }
         return pins
     }

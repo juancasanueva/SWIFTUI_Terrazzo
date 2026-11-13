@@ -100,7 +100,7 @@ extension DisplayPreference {
 
     /// Nil for no display at all, which is "Any display".
     func choosing(primary: String) -> DisplayPreference? {
-        primary.isEmpty ? nil : DisplayPreference([primary] + fallbacks)
+        primary.isEmpty ? nil : DisplayPreference([primary] + fallbacks.filter { $0 != primary })
     }
 
     func choosing(fallbacks: [String]) -> DisplayPreference {
