@@ -399,11 +399,12 @@ enum LayoutEngine {
         _ sizes: inout [CGFloat], at index: Int, by delta: CGFloat, minimums: [CGFloat]
     ) -> Bool {
         guard abs(delta) >= 1 else { return false }
+        // A side already below its minimum has no room to give, which must not turn the move around.
         var applied = delta
         if delta > 0 {
-            applied = min(delta, sizes[index + 1] - minimums[index + 1])
+            applied = max(0, min(delta, sizes[index + 1] - minimums[index + 1]))
         } else {
-            applied = max(delta, minimums[index] - sizes[index])
+            applied = min(0, max(delta, minimums[index] - sizes[index]))
         }
         guard abs(applied) >= 1 else { return false }
         sizes[index] += applied

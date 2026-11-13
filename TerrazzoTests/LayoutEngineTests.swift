@@ -193,6 +193,48 @@ struct LayoutEngineTests {
         #expect(frames(.grid, 2, in: area, overrides: overrides)[0].width == 550)
     }
 
+    /// Two columns where one is narrower than the 240 pt floor, as sizes carried over from a larger screen can be.
+    private func columnsWithOneBelowTheFloor(narrow: Int, in area: CGRect) -> SizeOverrides {
+        var overrides = SizeOverrides()
+        LayoutEngine.moveEdges(
+            slot: 0, kind: .grid, count: 2, area: area, main: .half, gap: 0, minimums: [:],
+            deltas: EdgeDeltas(maxX: 100), overrides: &overrides)
+        for key in overrides.tracks.keys { overrides.tracks[key] = narrow == 0 ? [0.21, 0.79] : [0.79, 0.21] }
+        return overrides
+    }
+
+    @Test func growingTowardANeighborAlreadyBelowItsMinimumDoesNothing() {
+        let area = CGRect(x: 0, y: 0, width: 1000, height: 500)
+        var overrides = columnsWithOneBelowTheFloor(narrow: 1, in: area)
+        let before = overrides
+        let moved = LayoutEngine.moveEdges(
+            slot: 0, kind: .grid, count: 2, area: area, main: .half, gap: 0, minimums: [:],
+            deltas: EdgeDeltas(maxX: 100), overrides: &overrides)
+        #expect(!moved)
+        #expect(overrides == before)
+        #expect(frames(.grid, 2, in: area, overrides: overrides)[0].width == 790)
+    }
+
+    @Test func growingTowardANeighborBelowItsMinimumOnTheOtherSideDoesNothing() {
+        let area = CGRect(x: 0, y: 0, width: 1000, height: 500)
+        var overrides = columnsWithOneBelowTheFloor(narrow: 0, in: area)
+        let before = overrides
+        let moved = LayoutEngine.moveEdges(
+            slot: 1, kind: .grid, count: 2, area: area, main: .half, gap: 0, minimums: [:],
+            deltas: EdgeDeltas(minX: -100), overrides: &overrides)
+        #expect(!moved)
+        #expect(overrides == before)
+    }
+
+    @Test func aStepTowardANeighborBelowItsMinimumReportsTheLimit() {
+        let area = CGRect(x: 0, y: 0, width: 1000, height: 500)
+        var overrides = columnsWithOneBelowTheFloor(narrow: 1, in: area)
+        let result = LayoutEngine.step(
+            slot: 0, grow: true, kind: .grid, count: 2, area: area, main: .half, gap: 0, minimums: [:],
+            overrides: &overrides)
+        #expect(result == .limit)
+    }
+
     @Test func draggedCellEdgeResizesWithinItsColumn() {
         let area = CGRect(x: 0, y: 0, width: 1000, height: 500)
         var overrides = SizeOverrides()
