@@ -1151,8 +1151,16 @@ final class AppController {
                 let rect = CGRect(dictionaryRepresentation: bounds),
                 rect.insetBy(dx: -tolerance, dy: -tolerance).contains(point),
                 let number = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
-                let owner = (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value, owner != getpid()
+                let owner = (entry[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value
             else { continue }
+            if owner == getpid() {
+                // A window of ours that AppKit doesn't know is let through, like the overlays.
+                let ignoresMouse = NSApp.window(withWindowNumber: Int(number))?.ignoresMouseEvents ?? true
+                if PointerPolicy.ownWindowTakesPointer(frame: rect, ignoresMouse: ignoresMouse, pointer: point) {
+                    return nil
+                }
+                continue
+            }
             let layer = (entry[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0
             if layer != 0 {
                 // Notification Center and others keep invisible full-screen windows up here.

@@ -10,6 +10,23 @@ struct PointerPolicyTests {
     private let samsung = CGRect(x: -2560, y: 0, width: 2560, height: 1440)
     private let window = CGRect(x: 1700, y: 50, width: 1700, height: 700)
 
+    private func ownWindowTakesPointer(at pointer: CGPoint, ignoresMouse: Bool) -> Bool {
+        PointerPolicy.ownWindowTakesPointer(frame: window, ignoresMouse: ignoresMouse, pointer: pointer)
+    }
+
+    @Test func settingsAndPanelsKeepThePointerFromTheWindowsBelow() {
+        #expect(ownWindowTakesPointer(at: CGPoint(x: 2000, y: 300), ignoresMouse: false))
+    }
+
+    @Test func overlaysLetThePointerThrough() {
+        #expect(!ownWindowTakesPointer(at: CGPoint(x: 2000, y: 300), ignoresMouse: true))
+    }
+
+    @Test func anOwnWindowTakesThePointerOnlyInsideItsBounds() {
+        // Just outside its edge the pointer is over whatever is beside it, tolerance or not.
+        #expect(!ownWindowTakesPointer(at: CGPoint(x: 1697, y: 300), ignoresMouse: false))
+    }
+
     @Test func bothRulesAreOnByDefault() {
         #expect(both.onWindowFocus)
         #expect(both.onMonitorChange)
