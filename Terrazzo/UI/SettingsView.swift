@@ -120,8 +120,12 @@ private struct LayoutSettings: View {
                 }
             }
             Section("Workspace displays") {
+                WorkspaceDisplayHeader()
+                let externalNames = Displays.current().filter { !$0.isBuiltIn }.map(\.name)
                 ForEach(Array(VirtualWorkspaces.numbers), id: \.self) { number in
-                    workspacePicker(number)
+                    WorkspaceDisplayRow(
+                        number: number, preference: $controller.settings.workspaceDisplays[String(number)],
+                        externalNames: externalNames)
                 }
             }
             Section("Screen edges") {
@@ -136,57 +140,6 @@ private struct LayoutSettings: View {
             }
         }
         .formStyle(.grouped)
-    }
-
-    @ViewBuilder
-    private func workspacePicker(_ number: Int) -> some View {
-        let key = String(number)
-        let preference = controller.settings.workspaceDisplays[key] ?? DisplayPreference([])
-        let primary = Binding<String>(
-            get: { preference.primary },
-            set: { controller.settings.workspaceDisplays[key] = preference.choosing(primary: $0) })
-        let fallbacks = Binding<[String]>(
-            get: { preference.fallbacks },
-            set: { controller.settings.workspaceDisplays[key] = preference.choosing(fallbacks: $0) })
-        Picker(String(localized: "Workspace \(number)"), selection: primary) {
-            Text("Any display").tag("")
-            ForEach(displayChoices(keeping: preference.primary), id: \.self) { Text(Self.title($0)).tag($0) }
-        }
-        if !preference.primary.isEmpty {
-            Picker("If not connected", selection: fallbacks) {
-                Text("Any display").tag([String]())
-                ForEach(fallbackChoices(for: preference), id: \.self) { choice in
-                    Text(choice.map(Self.title).joined(separator: ", ")).tag(choice)
-                }
-            }
-        }
-    }
-
-    /// The built-in display goes by role, so the choice holds in any language; the others go by name.
-    private func displayChoices(keeping current: String) -> [String] {
-        var choices = [DisplayPreference.builtIn] + Displays.current().filter { !$0.isBuiltIn }.map(\.name)
-        // A pin can be part of a name, or name a monitor that isn't connected: keep it selectable.
-        if !current.isEmpty, !choices.contains(current) { choices.append(current) }
-        return choices
-    }
-
-    private func fallbackChoices(for preference: DisplayPreference) -> [[String]] {
-        var choices = [DisplayPreference.builtIn, DisplayPreference.external]
-            .filter { $0 != preference.primary }
-            .map { [$0] }
-        // A longer list written in the config by hand stays selectable.
-        if !preference.fallbacks.isEmpty, !choices.contains(preference.fallbacks) {
-            choices.append(preference.fallbacks)
-        }
-        return choices
-    }
-
-    private static func title(_ candidate: String) -> String {
-        switch candidate {
-        case DisplayPreference.builtIn: String(localized: "Built-in display")
-        case DisplayPreference.external: String(localized: "Any external display")
-        default: candidate
-        }
     }
 
     private func edgeSlider(_ title: LocalizedStringKey, _ edge: WritableKeyPath<ScreenEdges, CGFloat>) -> some View {
@@ -211,6 +164,98 @@ private struct LayoutSettings: View {
                 Slider(value: binding, in: 0...200, step: 2)
                 Text("\(Int(binding.wrappedValue)) pt").monospacedDigit().frame(width: 52, alignment: .trailing)
             }
+        }
+    }
+}
+
+/// Titles for the two columns of `WorkspaceDisplayRow`.
+struct WorkspaceDisplayHeader: View {
+    var body: some View {
+        HStack {
+            WorkspaceDisplayRow.label(VirtualWorkspaces.numbers.upperBound).hidden()
+            Group {
+                Text("Display")
+                Text("If not connected")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding(.leading, WorkspaceDisplayRow.menuInset)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// One workspace on one row: the display it shows on, then what to use while that display is away.
+struct WorkspaceDisplayRow: View {
+    /// How far a menu's text sits from the menu's leading edge, so the column titles line up with it.
+    static let menuInset: CGFloat = 12
+
+    let number: Int
+    @Binding var preference: DisplayPreference?
+    /// The connected displays other than the built-in one.
+    let externalNames: [String]
+
+    private var current: DisplayPreference { preference ?? DisplayPreference([]) }
+
+    var body: some View {
+        HStack {
+            Self.label(number).accessibilityHidden(true)
+            Picker(String(localized: "Workspace \(number)"), selection: primary) {
+                Text("Any display").tag("")
+                ForEach(displayChoices, id: \.self) { Text(Self.title($0)).tag($0) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Kept in place while unused, so the columns don't move as displays are chosen.
+            Picker("If not connected", selection: fallbacks) {
+                Text("Any display").tag([String]())
+                ForEach(fallbackChoices, id: \.self) { choice in
+                    Text(choice.map(Self.title).joined(separator: ", ")).tag(choice)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(current.primary.isEmpty ? 0 : 1)
+            .disabled(current.primary.isEmpty)
+            .accessibilityHidden(current.primary.isEmpty)
+        }
+        .labelsHidden()
+    }
+
+    /// Every number takes the same width, so the columns line up down the list.
+    static func label(_ number: Int) -> some View {
+        Text("Workspace \(number)").monospacedDigit()
+    }
+
+    private var primary: Binding<String> {
+        Binding(get: { current.primary }, set: { preference = current.choosing(primary: $0) })
+    }
+
+    private var fallbacks: Binding<[String]> {
+        Binding(get: { current.fallbacks }, set: { preference = current.choosing(fallbacks: $0) })
+    }
+
+    /// The built-in display goes by role, so the choice holds in any language; the others go by name.
+    private var displayChoices: [String] {
+        var choices = [DisplayPreference.builtIn] + externalNames
+        // A pin can be part of a name, or name a monitor that isn't connected: keep it selectable.
+        if !current.primary.isEmpty, !choices.contains(current.primary) { choices.append(current.primary) }
+        return choices
+    }
+
+    private var fallbackChoices: [[String]] {
+        var choices = [DisplayPreference.builtIn, DisplayPreference.external]
+            .filter { $0 != current.primary }
+            .map { [$0] }
+        // A longer list written in the config by hand stays selectable.
+        if !current.fallbacks.isEmpty, !choices.contains(current.fallbacks) { choices.append(current.fallbacks) }
+        return choices
+    }
+
+    private static func title(_ candidate: String) -> String {
+        switch candidate {
+        case DisplayPreference.builtIn: String(localized: "Built-in display")
+        case DisplayPreference.external: String(localized: "Any external display")
+        default: candidate
         }
     }
 }

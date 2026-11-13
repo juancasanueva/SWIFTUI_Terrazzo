@@ -19,6 +19,26 @@ struct InterfaceSmokeTests {
         #expect(host.fittingSize.width > 0)
     }
 
+    @Test func aWorkspaceAndItsFallbackShareOneRow() {
+        struct Rows: View {
+            @State var pins: [String: DisplayPreference] = ["1": ["LG ULTRAWIDE", "@external"], "2": "@builtin"]
+            var body: some View {
+                Form {
+                    WorkspaceDisplayHeader()
+                    ForEach(1...3, id: \.self) { number in
+                        WorkspaceDisplayRow(
+                            number: number, preference: $pins[String(number)], externalNames: ["LG ULTRAWIDE"])
+                    }
+                }
+                .formStyle(.grouped)
+            }
+        }
+        let host = render(Rows(), size: CGSize(width: 560, height: 400))
+        #expect(host.fittingSize.height > 0)
+        // Two rows each, as before, would not fit: a header and three rows do.
+        #expect(host.fittingSize.height < 260)
+    }
+
     @Test func settingsRender() {
         let host = render(SettingsView(controller: AppController.shared), size: CGSize(width: 560, height: 560))
         #expect(host.fittingSize.height > 0)
@@ -205,6 +225,7 @@ struct InterfaceSmokeTests {
     @Test func theFallbackDisplayChoicesAreTranslated() {
         let spanish = Bundle(for: AppController.self).path(forResource: "es", ofType: "lproj").flatMap(Bundle.init(path:))
         #expect(spanish?.localizedString(forKey: "If not connected", value: nil, table: nil) == "Si no está conectada")
+        #expect(spanish?.localizedString(forKey: "Display", value: nil, table: nil) == "Pantalla")
         #expect(spanish?.localizedString(forKey: "Built-in display", value: nil, table: nil) == "Pantalla integrada")
         #expect(
             spanish?.localizedString(forKey: "Any external display", value: nil, table: nil)
