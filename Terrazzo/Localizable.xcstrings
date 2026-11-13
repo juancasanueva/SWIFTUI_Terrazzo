@@ -1933,34 +1933,6 @@
         }
       }
     },
-    "Include diagnostics": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Incluir diagnósticos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "診断情報を含める"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "진단 정보 포함"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "包含诊断信息"
-          }
-        }
-      }
-    },
     "Keyboard": {
       "localizations": {
         "es": {

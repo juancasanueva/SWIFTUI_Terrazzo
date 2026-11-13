@@ -562,7 +562,6 @@ enum ProjectLinks {
 
 private struct AboutSettings: View {
     @Bindable var controller: AppController
-    @State private var includeDiagnostics = true
 
     private var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
@@ -598,7 +597,6 @@ private struct AboutSettings: View {
                 }
             }
             Section {
-                Toggle("Include diagnostics", isOn: $includeDiagnostics)
                 Button("Copy Report") {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(report(), forType: .string)
@@ -609,15 +607,15 @@ private struct AboutSettings: View {
     }
 
     private func report() -> String {
-        var lines = ["Terrazzo \(version)", ProcessInfo.processInfo.operatingSystemVersionString]
-        if includeDiagnostics {
-            let displays = Displays.current()
-            lines.append("Displays: \(displays.map { "\(Int($0.frame.width))x\(Int($0.frame.height))" }.joined(separator: ", "))")
-            lines.append("Status: \(controller.status)")
-            lines.append("Stage Manager: \(controller.stageManagerOn)")
-            lines.append("Learned apps: \(controller.rules.learnedMinimums.count)")
-        }
-        return lines.joined(separator: "\n")
+        let displays = Displays.current()
+        return [
+            "Terrazzo \(version)",
+            ProcessInfo.processInfo.operatingSystemVersionString,
+            "Displays: \(displays.map { "\(Int($0.frame.width))x\(Int($0.frame.height))" }.joined(separator: ", "))",
+            "Status: \(controller.status)",
+            "Stage Manager: \(controller.stageManagerOn)",
+            "Learned apps: \(controller.rules.learnedMinimums.count)",
+        ].joined(separator: "\n")
     }
 }
 
