@@ -277,6 +277,36 @@ struct ConfigTests {
         #expect(map.combo(for: .tile5)?.symbols == "⌃⇧5")
     }
 
+    @Test func recordingAWindowCountShortcutChecksTheFiveKeysItBinds() throws {
+        let map = ShortcutMap()
+        // ⌃⇧K is free, but its modifiers put the five shortcuts on ⌃⇧1–5, which move a window to a workspace.
+        let pressed = try #require(KeyCombo(string: "ctrl+shift+k"))
+        let moves: [ShortcutAction] = [
+            .moveToWorkspace1, .moveToWorkspace2, .moveToWorkspace3, .moveToWorkspace4, .moveToWorkspace5,
+        ]
+        #expect(map.conflicts(for: pressed, action: .tile1, system: []) == moves.map { .shortcut($0) })
+        #expect(map.symbols(recording: pressed, for: .tile1) == "⌃⇧1–5")
+        #expect(map.symbols(recording: pressed, for: .retile) == "⌃⇧K")
+    }
+
+    @Test func recordingAWindowCountShortcutChecksMacOSKeysOnTheFiveKeys() throws {
+        let map = ShortcutMap()
+        let pressed = try #require(KeyCombo(string: "opt+shift+k"))
+        let taken = try #require(KeyCombo(string: "opt+shift+3"))
+        #expect(map.conflicts(for: pressed, action: .tile1, system: [taken]) == [.system])
+    }
+
+    @Test func recordingAWindowCountShortcutIgnoresTheKeyPressedAndItsOwnKeys() throws {
+        var map = ShortcutMap()
+        map.bindings[ShortcutAction.retile.rawValue] = "opt+shift+k"
+        // The key pressed is dropped, so Retile keeping ⌥⇧K is no conflict.
+        let pressed = try #require(KeyCombo(string: "opt+shift+k"))
+        #expect(map.conflicts(for: pressed, action: .tile1, system: [pressed]).isEmpty)
+        // Pressing the keys another window-count shortcut has changes nothing.
+        let own = try #require(map.combo(for: .tile3))
+        #expect(map.conflicts(for: own, action: .tile1, system: []).isEmpty)
+    }
+
     @Test func tabViewBackwardFollowsTabViewWithShiftAdded() {
         var map = ShortcutMap()
         map.bindings[ShortcutAction.tabView.rawValue] = "cmd+e"

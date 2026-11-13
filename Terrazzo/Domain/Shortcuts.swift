@@ -293,11 +293,31 @@ struct ShortcutMap: Codable, Equatable, Sendable {
         for action in ShortcutAction.allCases where action.tileCount != nil { bindings[action.rawValue] = nil }
     }
 
+    /// The keys that recording `combo` for `action` binds. The window-count shortcuts share their modifiers
+    /// and keep their own number keys, so recording one rebinds all five and drops the key pressed.
+    func combos(recording combo: KeyCombo, for action: ShortcutAction) -> [ShortcutAction: KeyCombo] {
+        guard action.tileCount != nil else { return [action: combo] }
+        var result: [ShortcutAction: KeyCombo] = [:]
+        for tile in ShortcutAction.allCases where tile.tileCount != nil {
+            result[tile] = KeyCombo(key: tile.defaultSuffix.key, modifiers: combo.modifiers)
+        }
+        return result
+    }
+
+    /// The keys that recording `combo` for `action` binds, as shown to the user.
+    func symbols(recording combo: KeyCombo, for action: ShortcutAction) -> String {
+        guard action.tileCount != nil else { return combo.symbols }
+        return KeyCombo(key: .n1, modifiers: combo.modifiers).symbols + "–5"
+    }
+
+    /// What already uses the keys that recording `combo` for `action` would bind.
     func conflicts(for combo: KeyCombo, action: ShortcutAction, system: Set<KeyCombo>) -> [ShortcutConflict] {
+        let recorded = combos(recording: combo, for: action)
+        let keys = Set(recorded.values)
         var result: [ShortcutConflict] = ShortcutAction.allCases
-            .filter { $0 != action && self.combo(for: $0) == combo }
+            .filter { recorded[$0] == nil && self.combo(for: $0).map(keys.contains) ?? false }
             .map { .shortcut($0) }
-        if system.contains(combo) { result.append(.system) }
+        if !keys.isDisjoint(with: system) { result.append(.system) }
         return result
     }
 

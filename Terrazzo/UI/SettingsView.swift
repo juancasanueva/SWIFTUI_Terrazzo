@@ -432,17 +432,20 @@ private struct KeyboardSettings: View {
     private func conflictSection(_ combo: KeyCombo, _ action: ShortcutAction) -> some View {
         let conflicts = controller.shortcuts.conflicts(for: combo, action: action, system: system)
         Section {
-            Text("\(combo.symbols) is already in use:").font(.callout)
+            Text("\(controller.shortcuts.symbols(recording: combo, for: action)) is already in use:").font(.callout)
             ForEach(Array(conflicts.enumerated()), id: \.offset) { _, conflict in
                 switch conflict {
                 case .system: Text("macOS").font(.caption)
                 case .shortcut(let other): Text(other.title).font(.caption)
                 }
             }
-            HStack {
-                Text("Free keys:").font(.caption)
-                ForEach(controller.shortcuts.suggestions(system: system, limit: 4), id: \.self) { free in
-                    Button(free.symbols) { commit(free, for: action) }.controlSize(.small)
+            // The window-count shortcuts keep their number keys, so a free key is no use to them.
+            if action.tileCount == nil {
+                HStack {
+                    Text("Free keys:").font(.caption)
+                    ForEach(controller.shortcuts.suggestions(system: system, limit: 4), id: \.self) { free in
+                        Button(free.symbols) { commit(free, for: action) }.controlSize(.small)
+                    }
                 }
             }
             HStack {
