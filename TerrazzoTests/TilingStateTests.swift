@@ -188,6 +188,34 @@ struct TilingStateTests {
         #expect(notices.contains(.stacked))
     }
 
+    private var twoPerScreen: TilingPolicy {
+        var policy = TilingPolicy(gap: 0)
+        policy.count = 2
+        return policy
+    }
+
+    @Test func refreshingLimitsKeepsAStackTheUserBuilt() {
+        var state = filled([1, 2, 3])
+        state.moveToTile(3, tile: 0, on: left, context: context())
+        #expect(tiles(state) == [[3, 1], [2]])
+        state.refreshLimits(context: context())
+        #expect(tiles(state) == [[3, 1], [2]])
+    }
+
+    @Test func refreshingLimitsSpreadsStacksWhenTheLimitGrows() {
+        var state = filled([1, 2, 3], context: context(policy: twoPerScreen))
+        #expect(tiles(state).count == 2)
+        state.refreshLimits(context: context())
+        #expect(tiles(state).map(\.count) == [1, 1, 1])
+    }
+
+    @Test func refreshingLimitsStacksWhatNoLongerFits() {
+        var state = filled([1, 2, 3])
+        state.refreshLimits(context: context(policy: twoPerScreen))
+        #expect(tiles(state).count == 2)
+        #expect(tiles(state).flatMap { $0 }.sorted() == [1, 2, 3])
+    }
+
     @Test func floatPolicyCentersOnceThenRejoinsWhenATiledWindowCloses() {
         let ctx = context(policy: TilingPolicy(gap: 0, whenFull: .floatInMiddle))
         var state = filled([1, 2, 3], context: ctx)

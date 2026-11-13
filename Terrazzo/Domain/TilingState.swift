@@ -194,12 +194,7 @@ struct TilingState: Equatable {
         }
 
         // Settings, rotation or another Space may have changed what this screen allows.
-        for key in activeKeys where workspaces[key] != nil {
-            let limit = limit(on: key, context: context)
-            let grew = workspaces[key]?.appliedLimit.map { limit > $0 } ?? false
-            normalize(key, pull: grew, context: context)
-            workspaces[key]?.appliedLimit = limit
-        }
+        for key in activeKeys { applyLimit(on: key, context: context) }
 
         if let id = snapshot.focused {
             noteFocus(id, app: snapshot.focusedApp, activeKeys: activeKeys, context: context)
@@ -691,7 +686,17 @@ struct TilingState: Equatable {
 
     /// Re-applies the screen limits after a setting or a learned minimum changed.
     mutating func refreshLimits(context: TilingContext) {
-        for screen in context.screens { normalize(screen.key, pull: true, context: context) }
+        for screen in context.screens { applyLimit(on: screen.key, context: context) }
+    }
+
+    /// Stacked windows spread into free tiles only when the screen's limit grew: a stack below the limit is
+    /// one the user built, and it stays.
+    private mutating func applyLimit(on key: WorkspaceKey, context: TilingContext) {
+        guard workspaces[key] != nil else { return }
+        let limit = limit(on: key, context: context)
+        let grew = workspaces[key]?.appliedLimit.map { limit > $0 } ?? false
+        normalize(key, pull: grew, context: context)
+        workspaces[key]?.appliedLimit = limit
     }
 
     mutating func toggleZoom(_ id: WindowID, context: TilingContext) {
