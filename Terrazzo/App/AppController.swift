@@ -449,12 +449,14 @@ final class AppController {
     }
 
     private func applyLoginItem() {
-        guard settings.setupFinished else { return }
+        guard settings.setupFinished,
+            let change = LoginItemChange.needed(
+                openAtLogin: settings.openAtLogin, status: SMAppService.mainApp.status)
+        else { return }
         do {
-            if settings.openAtLogin {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
+            switch change {
+            case .register: try SMAppService.mainApp.register()
+            case .unregister: try SMAppService.mainApp.unregister()
             }
         } catch {
             overlays.showNotice(String(localized: "Could not change the Open at login setting."))
