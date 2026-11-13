@@ -202,9 +202,69 @@ struct VirtualWorkspacesTests {
     }
 
     @Test func namesPickTheFirstMatchingDisplayIgnoringCase() {
-        let displays = [(uuid: "a", name: "LG ULTRAWIDE"), (uuid: "b", name: "Odyssey G5")]
+        let displays = [display("a", "LG ULTRAWIDE"), display("b", "Odyssey G5")]
         let pins = VirtualWorkspaces.resolvePins(["1": "lg", "7": "odyssey", "8": "Dell", "x": "LG", "12": "LG"], displays: displays)
         #expect(pins == [1: "a", 7: "b"])
+    }
+
+    // MARK: Display candidates
+
+    private func display(_ uuid: String, _ name: String, x: CGFloat = 0, builtIn: Bool = false) -> DisplayInfo {
+        let frame = CGRect(x: x, y: 0, width: 1920, height: 1080)
+        return DisplayInfo(uuid: uuid, name: name, frame: frame, visibleFrame: frame, isBuiltIn: builtIn)
+    }
+
+    private var mac: DisplayInfo { display("mac", "Built-in Retina Display", builtIn: true) }
+
+    private let fallbacks: [String: DisplayPreference] = [
+        "1": "@builtin", "4": ["Odyssey G5", "@external"], "7": ["LG ULTRAWIDE", "@external"],
+    ]
+
+    @Test func theFirstCandidateWinsWhileItsDisplayIsConnected() {
+        let displays = [mac, display("ody", "Odyssey G5", x: 1512), display("lg", "LG ULTRAWIDE", x: 3432)]
+        #expect(VirtualWorkspaces.resolvePins(fallbacks, displays: displays) == [1: "mac", 4: "ody", 7: "lg"])
+    }
+
+    @Test func anAbsentDisplayFallsBackToTheOnlyExternalOne() {
+        let displays = [mac, display("dell", "DELL S2721DS", x: 1512)]
+        #expect(VirtualWorkspaces.resolvePins(fallbacks, displays: displays) == [1: "mac", 4: "dell", 7: "dell"])
+    }
+
+    @Test func withNoExternalDisplayTheWorkspaceIsLeftUnpinned() {
+        #expect(VirtualWorkspaces.resolvePins(fallbacks, displays: [mac]) == [1: "mac"])
+    }
+
+    @Test func theBuiltInDisplayMatchesWhateverLanguageNamesIt() {
+        let displays = [display("dell", "DELL S2721DS", x: -1920), display("mac", "Pantalla Retina integrada", builtIn: true)]
+        #expect(VirtualWorkspaces.resolvePins(["1": "@builtin"], displays: displays) == [1: "mac"])
+    }
+
+    @Test func anyExternalDisplayAvoidsOneThatAWorkspaceNames() {
+        let displays = [display("lg", "LG ULTRAWIDE", x: -1920), mac, display("dell", "DELL S2721DS", x: 1512)]
+        let pins = VirtualWorkspaces.resolvePins(["5": ["Odyssey G5", "@external"], "7": "LG"], displays: displays)
+        #expect(pins == [5: "dell", 7: "lg"])
+    }
+
+    @Test func anyExternalDisplayIsOtherwiseTheLeftmostOne() {
+        let displays = [mac, display("right", "DELL S2721DS", x: 1512), display("left", "LG ULTRAWIDE", x: -1920)]
+        #expect(VirtualWorkspaces.resolvePins(["5": "@external"], displays: displays) == [5: "left"])
+        let bothNamed = VirtualWorkspaces.resolvePins(["5": "@external", "6": "DELL", "7": "LG"], displays: displays)
+        #expect(bothNamed == [5: "left", 6: "right", 7: "left"])
+    }
+
+    @Test func aDisplaySettingReadsAsOneNameOrAListOfCandidates() throws {
+        let json = Data(#"{"1":"@builtin","4":["Odyssey G5","@external"]}"#.utf8)
+        let decoded = try JSONDecoder().decode([String: DisplayPreference].self, from: json)
+        #expect(decoded["1"]?.candidates == ["@builtin"])
+        #expect(decoded["4"]?.candidates == ["Odyssey G5", "@external"])
+    }
+
+    @Test func oneCandidateIsSavedAsAStringAndSeveralAsAList() throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let saved: [String: DisplayPreference] = ["1": "LG", "4": ["Odyssey G5", "@external"]]
+        let text = String(decoding: try encoder.encode(saved), as: UTF8.self)
+        #expect(text == #"{"1":"LG","4":["Odyssey G5","@external"]}"#)
     }
 
     @Test func aDisplayReturnsToTheWorkspaceItLeft() {
@@ -292,6 +352,24 @@ struct VirtualWorkspacesTests {
         settings.workspaceDisplays = ["1": "LG"]
         let data = try JSONEncoder().encode(settings)
         #expect(try JSONDecoder().decode(AppSettings.self, from: data).workspaceDisplays == ["1": "LG"])
+    }
+
+    @Test func aSettingsFileKeepsNamesAsStringsAndFallbacksAsLists() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("settings.json")
+        try Data(#"{"workspaceDisplays": {"1": "LG", "4": ["Odyssey G5", "@external"]}}"#.utf8).write(to: url)
+        let file = ConfigFile(url: url, defaults: AppSettings())
+
+        let settings = try file.load()
+        #expect(settings.workspaceDisplays == ["1": "LG", "4": ["Odyssey G5", "@external"]])
+
+        try file.save(settings)
+        let saved = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+        let displays = saved?["workspaceDisplays"] as? [String: Any]
+        #expect(displays?["1"] as? String == "LG")
+        #expect(displays?["4"] as? [String] == ["Odyssey G5", "@external"])
     }
 
     // MARK: Windows

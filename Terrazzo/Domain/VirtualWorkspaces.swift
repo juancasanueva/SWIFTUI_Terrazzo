@@ -53,15 +53,16 @@ struct VirtualWorkspaces: Equatable {
         self.pins = pins
     }
 
-    /// Turns the config's "number to part of a display name" into display identifiers. A name that
-    /// matches nothing connected leaves the workspace unpinned.
-    static func resolvePins(_ names: [String: String], displays: [(uuid: String, name: String)]) -> [Int: String] {
+    /// Turns the config's "number to preferred displays" into display identifiers. A workspace whose
+    /// candidates match nothing connected is left unpinned.
+    static func resolvePins(_ preferences: [String: DisplayPreference], displays: [DisplayInfo]) -> [Int: String] {
+        let valid = preferences.compactMap { text, preference in
+            Int(text).flatMap { numbers.contains($0) ? (number: $0, preference: preference) : nil }
+        }
+        let named = Set(valid.flatMap { $0.preference.namedDisplays(among: displays) })
         var pins: [Int: String] = [:]
-        for (text, name) in names {
-            guard let number = Int(text), numbers.contains(number), !name.isEmpty,
-                let display = displays.first(where: { $0.name.range(of: name, options: .caseInsensitive) != nil })
-            else { continue }
-            pins[number] = display.uuid
+        for entry in valid {
+            pins[entry.number] = entry.preference.display(among: displays, named: named)?.uuid
         }
         return pins
     }

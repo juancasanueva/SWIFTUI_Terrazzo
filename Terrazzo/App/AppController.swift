@@ -600,9 +600,7 @@ final class AppController {
     private func syncWorkspaces() {
         let displays = Displays.current()
         var updated = workspaceMap
-        updated.setPins(
-            VirtualWorkspaces.resolvePins(
-                settings.workspaceDisplays, displays: displays.map { ($0.uuid, $0.name) }))
+        updated.setPins(VirtualWorkspaces.resolvePins(settings.workspaceDisplays, displays: displays))
         var occupied: [Int: String] = [:]
         for (key, workspace) in state.workspaces
         where !workspace.tiles.isEmpty && key.space == spaces.activeSpace(ofDisplay: key.display)

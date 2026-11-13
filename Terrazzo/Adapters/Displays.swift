@@ -1,15 +1,6 @@
 import AppKit
 import CoreGraphics
 
-struct DisplayInfo: Equatable {
-    var uuid: String
-    var name: String
-    /// Whole screen, in window-system coordinates (origin at the top left of the main display).
-    var frame: CGRect
-    /// Below the menu bar and beside the Dock.
-    var visibleFrame: CGRect
-}
-
 enum Displays {
     static func current() -> [DisplayInfo] {
         let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
@@ -20,7 +11,8 @@ enum Displays {
             return DisplayInfo(
                 uuid: CFUUIDCreateString(nil, uuid) as String, name: screen.localizedName,
                 frame: flip(screen.frame, primaryHeight: primaryHeight),
-                visibleFrame: flip(screen.visibleFrame, primaryHeight: primaryHeight))
+                visibleFrame: flip(screen.visibleFrame, primaryHeight: primaryHeight),
+                isBuiltIn: CGDisplayIsBuiltin(number.uint32Value) != 0)
         }
     }
 

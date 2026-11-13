@@ -140,9 +140,13 @@ private struct LayoutSettings: View {
 
     private func workspacePicker(_ number: Int) -> some View {
         let key = String(number)
+        let candidates = controller.settings.workspaceDisplays[key]?.candidates ?? []
         let selection = Binding<String>(
-            get: { controller.settings.workspaceDisplays[key] ?? "" },
-            set: { controller.settings.workspaceDisplays[key] = $0.isEmpty ? nil : $0 })
+            get: { candidates.first ?? "" },
+            set: {
+                controller.settings.workspaceDisplays[key] =
+                    $0.isEmpty ? nil : DisplayPreference([$0] + candidates.dropFirst())
+            })
         var names = Displays.current().map(\.name)
         // A pin can be part of a name, or name a monitor that isn't connected: keep it selectable.
         if !selection.wrappedValue.isEmpty, !names.contains(selection.wrappedValue) {

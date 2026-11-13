@@ -86,9 +86,9 @@ struct AppSettings: Codable, Equatable, Sendable {
     var hoverFocus = false
     /// Moving a window to another workspace also goes there, with that window focused.
     var followMovedWindow = true
-    /// Workspace number to part of a display name, such as `"7": "Odyssey"`. The workspace always
-    /// shows on that display while it is connected.
-    var workspaceDisplays: [String: String] = [:]
+    /// Workspace number to the displays it prefers, such as `"7": ["Odyssey", "@external"]`. The
+    /// workspace always shows on the first of them that is connected.
+    var workspaceDisplays: [String: DisplayPreference] = [:]
     var cleanBackground: CleanBackground = .graphite
     var appearance: AppearanceChoice = .system
     /// Language code, or unset to follow the Mac.
