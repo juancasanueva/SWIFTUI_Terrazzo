@@ -1049,8 +1049,8 @@ final class AppController {
 
     private func floatCommand(always: Bool) {
         guard let id = ax.focusedWindow(), let record = ax.record(id) else { return }
-        // macOS can keep reporting a window that was just parked.
-        if let key = state.key(of: id), !isShown(key) { return }
+        // macOS can keep reporting a window that was just parked or left behind on another Space.
+        if let key = state.key(of: id), key != visibleKey(key.display) { return }
         if always {
             if !rules.excluded.contains(record.bundleID) { rules.excluded.append(record.bundleID) }
             return
@@ -1118,10 +1118,12 @@ final class AppController {
 
     // MARK: Lookups
 
-    /// The focused window, unless it is untracked or parked: after switching to an empty workspace,
-    /// macOS can keep reporting the window that was just hidden.
+    /// The focused window, unless it is untracked, parked, or on a Space that isn't showing: after switching
+    /// to an empty workspace or desktop, macOS can keep reporting the window that was just hidden.
     func shownFocusedWindow() -> WindowID? {
-        guard let id = ax.focusedWindow(), let key = state.key(of: id), isShown(key) else { return nil }
+        guard let id = ax.focusedWindow(), let key = state.key(of: id), key == visibleKey(key.display) else {
+            return nil
+        }
         return id
     }
 
