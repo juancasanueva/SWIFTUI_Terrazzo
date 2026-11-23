@@ -48,8 +48,9 @@ All of this is done once, in order, before the first release.
    Deployment branches and tags allows the `main` **branch** and the `v*`
    **tag**. Pages serves
    `https://juancasanueva.github.io/SWIFTUI_Terrazzo/appcast.xml`, the feed in
-   `Terrazzo/Resources/Terrazzo-Info.plist` (`SUFeedURL`). Without the `v*` tag
-   rule the deploy step fails at the end of an otherwise successful release.
+   `Terrazzo/Resources/Terrazzo-Info.plist` (`SUFeedURL`). Both jobs target
+   that environment, so without the `v*` tag rule GitHub refuses the release
+   job before it starts.
 4. **The Sparkle key is shared.** Terrazzo's `SUPublicEDKey`
    (`jqReS/cOvK94pbRz/4DwMBTRMwh/0Nf5OJZ5SAfZDVs=`) is the same public key the
    author's other apps ship, so `SPARKLE_PRIVATE_KEY` is the same private key
@@ -94,7 +95,8 @@ team, **no app-sandbox entitlement**, architecture, version, build, bundle name
 and identifier, no release files inside the bundle), Smoke (launch the delivered
 app; it must still be running 20 s later), fetch the Sparkle tools and
 the live feed, **Publish** (`gh release create --verify-tag --generate-notes`),
-build the appcast, deploy to Pages, delete the keychain.
+build the appcast, upload the site, delete the keychain. A second job,
+`deploy-feed`, then deploys the site to Pages on an Ubuntu runner.
 
 A tag with a hyphen (`v1.1.0-rc.1`) publishes a **prerelease** with no feed entry,
 so installed copies are never offered it. That is how to rehearse the pipeline
@@ -183,11 +185,20 @@ is fine because it never deployed:
 git push --delete origin v1.0.0 && git tag -d v1.0.0
 ```
 
-**After Publish** (build the appcast, Pages upload or deploy): the release and
+**Only the `deploy-feed` job failed**: the release and the site artifact exist,
+and the feed is the one step missing. Use **Re-run failed jobs**: it re-runs only
+`deploy-feed`, against the artifact the release job uploaded. Do that within a
+day, while the artifact is kept, and only if no later tag has run since: the
+artifact is the feed as it stood before this release, so deploying it after a
+newer one would drop the newer item. Otherwise cut the next patch.
+
+**After Publish** (build the appcast, site upload): the release and
 its zip exist and may already be picked up by the tap, but no installed copy is
 offered the version. Prefer **cutting the next patch** (`v1.0.1`) on a new commit.
-If the cause was outside the repository (a secret, the `github-pages` tag rule, a
-transient Pages failure), delete only the release and re-run the job. The
+If the cause was outside the repository (a secret, the `github-pages` tag rule),
+delete only the release and use **Re-run failed jobs**, which runs the release
+job and then `deploy-feed`. Never **Re-run all jobs** once the site was uploaded:
+a second `github-pages` artifact in the run makes the deploy fail. The
 distinct-commit gate only refuses a commit whose Pages deployment **succeeded**;
 a failed, cancelled or lost deployment leaves the commit free to deploy again:
 
@@ -195,13 +206,13 @@ a failed, cancelled or lost deployment leaves the commit free to deploy again:
 gh release delete v1.0.0 --repo juancasanueva/SWIFTUI_Terrazzo --yes
 ```
 
-Re-running a run whose Pages deploy failed rarely recovers it. Each attempt
-uploads its own `github-pages` artifact to the same run. The deploy then either
-finds none yet ("No artifacts named "github-pages" were found", although the
-upload step succeeded) or finds one left by an earlier attempt and refuses
-("Multiple artifacts named "github-pages" were unexpectedly found"). v1.0.18
-failed both ways across three re-runs, so after one failed re-run, cut the next
-patch on a new commit instead.
+The deploy used to be the last step of the release job, where it could look
+the site artifact up before GitHub listed it and fail with "No artifacts named
+"github-pages" were found" (actions/deploy-pages#451). Re-running that job
+uploaded a second artifact to the run, and the deploy then refused both
+("Multiple artifacts named "github-pages" were unexpectedly found"). v1.0.18 and
+v1.0.19 were published that way without reaching the feed, which is why the
+deploy is now its own job.
 
 Never delete or unflag a release the feed already points at; withdraw a bad
 release by publishing a higher version.

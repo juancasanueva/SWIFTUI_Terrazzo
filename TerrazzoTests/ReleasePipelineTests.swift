@@ -268,6 +268,24 @@ struct ReleaseWorkflowContractTests {
         #expect(groups == ["release-feed"])
     }
 
+    /// Deploying in the job that uploads the site can look the artifact up before
+    /// GitHub lists it (actions/deploy-pages#451), and a re-run then finds two.
+    /// A later job sees the one artifact the release job uploaded.
+    @Test func theFeedDeploysInItsOwnJobAfterTheRelease() throws {
+        let workflow = try ReleasePipelineSources.text(ReleasePipelineSources.workflow)
+        let parts = workflow.components(separatedBy: "\n  deploy-feed:\n")
+        try #require(parts.count == 2)
+        let (release, deploy) = (parts[0], parts[1])
+        #expect(release.contains("uses: actions/upload-pages-artifact@"))
+        #expect(!release.contains("uses: actions/deploy-pages@"))
+        #expect(deploy.contains("uses: actions/deploy-pages@"))
+        #expect(deploy.contains("    needs: release\n"))
+        #expect(deploy.contains("    if: ${{ !contains(github.ref_name, '-') }}\n"))
+        #expect(deploy.contains("      pages: write\n      id-token: write\n"))
+        #expect(deploy.contains("    environment: github-pages\n"))
+        #expect(!deploy.contains("secrets."))
+    }
+
     @Test func everyActionIsPinnedToACommitSHA() throws {
         let workflow = try ReleasePipelineSources.text(ReleasePipelineSources.workflow)
         let uses = try ReleasePipelineSources.captures(#"uses: (\S+)"#, in: workflow)
