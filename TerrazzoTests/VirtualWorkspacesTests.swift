@@ -141,6 +141,52 @@ struct VirtualWorkspacesTests {
         #expect(empty.display == nil)
     }
 
+    // MARK: New windows
+
+    private let workingKey = WorkspaceKey(display: "B", space: 1, virtual: 2)
+    private let otherDisplayKey = WorkspaceKey(display: "A", space: 1, virtual: 1)
+
+    private func working(_ app: String) -> WorkingWorkspace {
+        var working = WorkingWorkspace()
+        working.focused(app, on: workingKey)
+        return working
+    }
+
+    @Test func aNewWindowOfTheAppInUseJoinsTheWorkspaceInUse() {
+        let target = working("ghostty").destination(
+            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            showing: [workingKey, otherDisplayKey])
+        #expect(target == workingKey)
+    }
+
+    @Test func aNewWindowOfAnotherAppStaysWhereItLanded() {
+        let target = working("ghostty").destination(
+            ofNewWindowFrom: "safari", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            showing: [workingKey, otherDisplayKey])
+        #expect(target == otherDisplayKey)
+    }
+
+    @Test func aNewWindowStaysWhereItLandedWhenTheWorkspaceInUseIsNotShowing() {
+        let target = working("ghostty").destination(
+            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: nil, showing: [otherDisplayKey])
+        #expect(target == otherDisplayKey)
+    }
+
+    @Test func aNewWindowStaysWhereItLandedBeforeAnyWindowWasFocused() {
+        let target = WorkingWorkspace().destination(
+            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            showing: [workingKey, otherDisplayKey])
+        #expect(target == otherDisplayKey)
+    }
+
+    @Test func aNewWindowOfTheAppInUseJoinsTheEmptyWorkspaceTheUserWentTo() {
+        let empty = WorkspaceKey(display: "B", space: 1, virtual: 4)
+        let target = working("ghostty").destination(
+            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: empty,
+            showing: [empty, otherDisplayKey])
+        #expect(target == empty)
+    }
+
     // MARK: Pinned workspaces
 
     private func pinned() -> VirtualWorkspaces {

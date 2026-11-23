@@ -115,6 +115,30 @@ struct VirtualWorkspaces: Equatable {
     }
 }
 
+/// The workspace the user works in, so a window opened from there joins it. Apps choose where a new
+/// window goes, often on another display, which shows a different workspace.
+struct WorkingWorkspace: Equatable {
+    private var key: WorkspaceKey?
+    private var app: String?
+
+    /// Records the workspace of a focused window that is showing.
+    mutating func focused(_ app: String, on key: WorkspaceKey) {
+        self.key = key
+        self.app = app
+    }
+
+    /// Where a window that just appeared belongs. A window of the app in use joins the workspace in use,
+    /// or the empty one the user went to, while it shows; any other window stays where it landed, so an
+    /// app that starts keeps its windows where it puts them.
+    func destination(
+        ofNewWindowFrom app: String, landedOn landed: WorkspaceKey, emptyWorkspace: WorkspaceKey?,
+        showing: Set<WorkspaceKey>
+    ) -> WorkspaceKey {
+        guard app == self.app, let target = emptyWorkspace ?? key, showing.contains(target) else { return landed }
+        return target
+    }
+}
+
 /// Remembers that the user just went to an empty workspace. With no window to focus, nothing else says
 /// so: macOS keeps reporting the previous window for a while, and the pointer may be on another monitor.
 struct EmptyWorkspaceFocus: Equatable {

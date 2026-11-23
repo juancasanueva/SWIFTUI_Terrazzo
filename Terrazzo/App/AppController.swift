@@ -98,6 +98,7 @@ final class AppController {
     @ObservationIgnored private var hiddenWindows: Set<WindowID> = []
     @ObservationIgnored private var lastWorkspaceSwitch = Date.distantPast
     @ObservationIgnored private var emptyFocus = EmptyWorkspaceFocus()
+    @ObservationIgnored private var working = WorkingWorkspace()
     @ObservationIgnored private var pointerFollowed: (window: WindowID, display: String)?
     @ObservationIgnored private var pendingShownFocus: String?
     @ObservationIgnored private var terminationSource: DispatchSourceSignal?
@@ -512,10 +513,17 @@ final class AppController {
         }
 
         let excluded = Set(rules.excluded)
+        let showing = Set(context.screens.map(\.key))
+        let emptyWorkspace = emptyFocus.display.map(visibleKey)
         var windows: [ObservedWindow] = []
         for record in records where record.isTileable && !record.isMinimized && !excluded.contains(record.bundleID) {
             if isParked(record.id, displays: displays) { continue }
-            guard let key = key(for: record, displays: displays) else { continue }
+            guard var key = key(for: record, displays: displays) else { continue }
+            // Never seen before: a window restored from the Dock keeps its app and returns where it was.
+            if state.apps[record.id] == nil, !state.userFloats.contains(record.id) {
+                key = working.destination(
+                    ofNewWindowFrom: record.bundleID, landedOn: key, emptyWorkspace: emptyWorkspace, showing: showing)
+            }
             windows.append(ObservedWindow(id: record.id, app: record.bundleID, key: key, frame: record.frame))
         }
         // Order is opening order: window numbers grow as windows are created.
@@ -529,6 +537,9 @@ final class AppController {
             windows: windows, minimized: records.filter(\.isMinimized).map(\.id), focused: focused,
             focusedApp: focusedOtherApp(), existing: Self.existingWindows())
         show(state.reconcile(snapshot, context: context))
+        if let id = state.focused, let key = state.key(of: id), showing.contains(key), let app = state.apps[id] {
+            working.focused(app, on: key)
+        }
         emptyFocus.focusObserved(
             window: focused, isShown: focused.flatMap { state.key(of: $0) }.map(isShown) ?? false)
         apply(context: context)
