@@ -195,6 +195,14 @@ a failed, cancelled or lost deployment leaves the commit free to deploy again:
 gh release delete v1.0.0 --repo juancasanueva/SWIFTUI_Terrazzo --yes
 ```
 
+Re-running a run whose Pages deploy failed rarely recovers it. Each attempt
+uploads its own `github-pages` artifact to the same run. The deploy then either
+finds none yet ("No artifacts named "github-pages" were found", although the
+upload step succeeded) or finds one left by an earlier attempt and refuses
+("Multiple artifacts named "github-pages" were unexpectedly found"). v1.0.18
+failed both ways across three re-runs, so after one failed re-run, cut the next
+patch on a new commit instead.
+
 Never delete or unflag a release the feed already points at; withdraw a bad
 release by publishing a higher version.
 
