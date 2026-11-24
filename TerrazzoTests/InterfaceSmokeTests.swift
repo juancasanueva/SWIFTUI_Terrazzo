@@ -231,6 +231,15 @@ struct InterfaceSmokeTests {
             spanish?.localizedString(forKey: "Any external display", value: nil, table: nil)
                 == "Cualquier pantalla externa")
     }
+
+    @Test func theWorkspaceLayoutChoicesAreTranslated() {
+        let spanish = Bundle(for: AppController.self).path(forResource: "es", ofType: "lproj").flatMap(Bundle.init(path:))
+        #expect(spanish?.localizedString(forKey: "Workspaces", value: nil, table: nil) == "Escritorios")
+        #expect(spanish?.localizedString(forKey: "Displays", value: nil, table: nil) == "Pantallas")
+        #expect(
+            spanish?.localizedString(forKey: "Uses the defaults", value: nil, table: nil)
+                == "Usa los valores predeterminados")
+    }
 }
 
 @MainActor

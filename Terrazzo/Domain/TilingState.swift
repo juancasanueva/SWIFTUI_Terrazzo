@@ -108,6 +108,16 @@ struct Tile: Equatable, Sendable {
     var barOrder: [WindowID] { windows.sorted(by: >) }
 }
 
+/// The layout and window count a workspace shows, and the most windows that layout fits on its screen.
+struct LayoutChoice: Equatable, Sendable {
+    var kind: LayoutKind
+    var count: Int
+    var maxCount: Int
+    var isVertical: Bool
+    /// True while the workspace has chosen neither a layout nor a window count of its own.
+    var followsDefaults: Bool
+}
+
 struct Workspace: Equatable, Sendable {
     var tiles: [Tile] = []
     var overflow: [WindowID] = []
@@ -328,6 +338,16 @@ struct TilingState: Equatable {
         if let kind = workspace.kind { return kind }
         if !policy.kindIsChosen, Orientation(area: area) == .vertical { return .rows }
         return policy.kind
+    }
+
+    /// What a workspace shows on a screen of this size: its own choices, or the defaults while it has none.
+    func layoutChoice(_ workspace: Workspace, area: CGRect, policy: TilingPolicy) -> LayoutChoice {
+        let kind = resolvedKind(workspace, area: area, policy: policy)
+        let maxCount = LayoutEngine.maxCount(kind: kind, area: area, gap: policy.gap)
+        return LayoutChoice(
+            kind: kind, count: min(workspace.count ?? policy.count, maxCount), maxCount: maxCount,
+            isVertical: Orientation(area: area) == .vertical,
+            followsDefaults: workspace.kind == nil && workspace.count == nil)
     }
 
     func limit(on key: WorkspaceKey, context: TilingContext) -> Int {

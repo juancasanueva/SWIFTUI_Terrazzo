@@ -393,13 +393,18 @@ final class AppController {
 
     private func hydrate(_ key: WorkspaceKey) {
         guard state.workspaces[key] == nil else { return }
+        state.workspaces[key] = storedWorkspace(key)
+    }
+
+    /// A workspace not set up yet, with the choices saved for it.
+    private func storedWorkspace(_ key: WorkspaceKey) -> Workspace {
         var workspace = Workspace()
         if let stored = screens.preferences(for: key) {
             workspace.kind = stored.kind
             workspace.count = stored.count
             workspace.overrides = stored.overrides
         }
-        state.workspaces[key] = workspace
+        return workspace
     }
 
     private func applyScreenPreferencesToWorkspaces() {
@@ -968,7 +973,7 @@ final class AppController {
     // MARK: Shortcuts
 
     enum SettingsTab: Hashable {
-        case general, layout, highlight, keyboard, apps, about
+        case general, layout, displays, highlight, keyboard, apps, about
     }
 
     func perform(_ action: ShortcutAction) {
@@ -1364,11 +1369,16 @@ final class AppController {
         apply()
     }
 
-    /// Largest window count this layout allows on this screen.
-    func maxCount(kind: LayoutKind, on key: WorkspaceKey) -> Int {
+    /// A numbered workspace on a display, in the Space showing there now, whether the workspace is showing or not.
+    func workspaceKey(_ number: Int, on display: String) -> WorkspaceKey {
+        WorkspaceKey(display: display, space: spaces.activeSpace(ofDisplay: display), virtual: number)
+    }
+
+    /// The layout and window count a workspace shows, using its display's size even while it isn't showing.
+    func layoutChoice(for key: WorkspaceKey) -> LayoutChoice? {
         let context = context()
-        guard let area = state.area(of: key, context: context) else { return 4 }
-        return LayoutEngine.maxCount(kind: kind, area: area, gap: context.policy.gap)
+        guard let area = context.screens.first(where: { $0.key.display == key.display })?.area else { return nil }
+        return state.layoutChoice(state.workspaces[key] ?? storedWorkspace(key), area: area, policy: context.policy)
     }
 
     func closeWindow(_ id: WindowID) {
