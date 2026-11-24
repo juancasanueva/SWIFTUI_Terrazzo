@@ -10,6 +10,8 @@ struct SettingsView: View {
                 .tag(AppController.SettingsTab.general)
             LayoutSettings(controller: controller).tabItem { Label("Layout", systemImage: "square.grid.2x2") }
                 .tag(AppController.SettingsTab.layout)
+            DisplaysSettings(controller: controller).tabItem { Label("Displays", systemImage: "display.2") }
+                .tag(AppController.SettingsTab.displays)
             HighlightSettings(controller: controller).tabItem { Label("Highlight", systemImage: "sparkles") }
                 .tag(AppController.SettingsTab.highlight)
             KeyboardSettings(controller: controller).tabItem { Label("Keyboard", systemImage: "keyboard") }
@@ -90,14 +92,24 @@ private struct LayoutSettings: View {
                     Text("Automatic").tag(LayoutKind?.none)
                     ForEach(LayoutKind.allCases, id: \.self) { Text($0.title).tag(LayoutKind?.some($0)) }
                 }
+                Stepper(
+                    "Windows per screen: \(controller.settings.windowsPerScreen)",
+                    value: $controller.settings.windowsPerScreen, in: 1...5)
+            } header: {
+                Text("Defaults for new workspaces")
+            } footer: {
+                Text(
+                    "A workspace uses these until you choose its own layout or number of windows, below or in the menu bar panel."
+                )
+                .font(.footnote).foregroundStyle(.secondary)
+            }
+            WorkspaceLayoutsSection(controller: controller)
+            Section {
                 Picker("Main window size", selection: $controller.settings.mainSize) {
                     Text("Half").tag(MainSize.half)
                     Text("60%").tag(MainSize.sixty)
                     Text("Two-thirds").tag(MainSize.twoThirds)
                 }
-                Stepper(
-                    "Windows per screen: \(controller.settings.windowsPerScreen)",
-                    value: $controller.settings.windowsPerScreen, in: 1...5)
                 Picker("When a screen is full", selection: $controller.settings.whenFull) {
                     Text("Stack on top").tag(FullScreenBehavior.stack)
                     Text("Float in the middle").tag(FullScreenBehavior.floatInMiddle)
@@ -117,15 +129,6 @@ private struct LayoutSettings: View {
                         Slider(value: $controller.settings.gap, in: 0...32, step: 1)
                         Text("\(Int(controller.settings.gap)) pt").monospacedDigit()
                     }
-                }
-            }
-            Section("Workspace displays") {
-                WorkspaceDisplayHeader()
-                let externalNames = Displays.current().filter { !$0.isBuiltIn }.map(\.name)
-                ForEach(Array(VirtualWorkspaces.numbers), id: \.self) { number in
-                    WorkspaceDisplayRow(
-                        number: number, preference: $controller.settings.workspaceDisplays[String(number)],
-                        externalNames: externalNames)
                 }
             }
             Section("Screen edges") {
@@ -164,6 +167,89 @@ private struct LayoutSettings: View {
                 Slider(value: binding, in: 0...200, step: 2)
                 Text("\(Int(binding.wrappedValue)) pt").monospacedDigit().frame(width: 52, alignment: .trailing)
             }
+        }
+    }
+}
+
+private struct DisplaysSettings: View {
+    @Bindable var controller: AppController
+
+    var body: some View {
+        Form {
+            Section("Workspace displays") {
+                WorkspaceDisplayHeader()
+                let externalNames = Displays.current().filter { !$0.isBuiltIn }.map(\.name)
+                ForEach(Array(VirtualWorkspaces.numbers), id: \.self) { number in
+                    WorkspaceDisplayRow(
+                        number: number, preference: $controller.settings.workspaceDisplays[String(number)],
+                        externalNames: externalNames)
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// Each numbered workspace's layout and window count on one display: the choices the menu bar panel offers
+/// for the workspace in front, for every workspace at once.
+struct WorkspaceLayoutsSection: View {
+    @Bindable var controller: AppController
+    @State private var chosenDisplay = ""
+
+    var body: some View {
+        let displays = Displays.current()
+        let pointerDisplay = controller.pointerKey()?.display
+        let display = displays.first { $0.uuid == chosenDisplay }
+            ?? displays.first { $0.uuid == pointerDisplay } ?? displays.first
+        Section {
+            if displays.count > 1 {
+                Picker("Display", selection: Binding(get: { display?.uuid ?? "" }, set: { chosenDisplay = $0 })) {
+                    ForEach(displays, id: \.uuid) { Text($0.name).tag($0.uuid) }
+                }
+            }
+            if let display {
+                ForEach(Array(VirtualWorkspaces.numbers), id: \.self) { number in
+                    WorkspaceLayoutRow(controller: controller, key: controller.workspaceKey(number, on: display.uuid))
+                }
+            }
+        } header: {
+            Text("Workspaces")
+        } footer: {
+            Text("Each workspace keeps its own layout on each display.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// One workspace: its number, whether it is showing or still on the defaults, then its layout and window count.
+struct WorkspaceLayoutRow: View {
+    let controller: AppController
+    let key: WorkspaceKey
+
+    var body: some View {
+        if let choice = controller.layoutChoice(for: key) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text("Workspace \(key.virtual)").monospacedDigit()
+                        if controller.isShown(key) {
+                            Circle().fill(.green).frame(width: 6, height: 6)
+                                .help(Text("Showing now"))
+                                .accessibilityLabel(Text("Showing now"))
+                        }
+                    }
+                    if choice.followsDefaults {
+                        Text("Uses the defaults").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 130, alignment: .leading)
+                LayoutChoiceControls(
+                    choice: choice,
+                    onKind: { controller.setKind($0, on: key) },
+                    onCount: { controller.setCount($0, on: key) })
+                .controlSize(.small)
+            }
+            .accessibilityElement(children: .contain)
         }
     }
 }

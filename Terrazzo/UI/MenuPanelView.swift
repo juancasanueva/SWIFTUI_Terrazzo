@@ -158,43 +158,21 @@ struct MenuPanelView: View {
     }
 
     private func windowsOnThisScreen(_ key: WorkspaceKey) -> some View {
-        let workspace = controller.state.workspaces[key]
-        let context = controller.context()
-        let area = controller.state.area(of: key, context: context) ?? .zero
-        let vertical = Orientation(area: area) == .vertical
-        let kind = workspace.map { controller.state.resolvedKind($0, area: area, policy: context.policy) }
-            ?? controller.settings.layout ?? .grid
-        let maxCount = controller.maxCount(kind: kind, on: key)
-        let selected = min(workspace?.count ?? controller.settings.windowsPerScreen, maxCount)
-        return VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Windows on this screen").font(.caption).foregroundStyle(.secondary)
-            HStack {
-                ForEach(LayoutKind.allCases, id: \.self) { option in
-                    Button {
-                        controller.setKind(option, on: key)
-                    } label: {
-                        Image(systemName: option.symbol).frame(width: 26, height: 20)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(option == kind ? .accentColor : nil)
-                    .disabled(vertical && option == .columns)
-                    .help(Text(option.title))
+            if let choice = controller.layoutChoice(for: key) {
+                LayoutChoiceControls(
+                    choice: choice,
+                    onKind: { controller.setKind($0, on: key) },
+                    onCount: { controller.setCount($0, on: key) })
+                if choice.isVertical {
+                    Text("Columns isn't available on a vertical screen.")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
-                Spacer()
-                ForEach(1...(maxCount == 5 ? 5 : 4), id: \.self) { count in
-                    Button("\(count)") { controller.setCount(count, on: key) }
-                        .buttonStyle(.bordered)
-                        .tint(count == selected ? .accentColor : nil)
-                        .disabled(count > maxCount)
+                if choice.maxCount < 4 {
+                    Text("This screen is too small for more than \(choice.maxCount) windows in this layout.")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
-            }
-            if vertical {
-                Text("Columns isn't available on a vertical screen.")
-                    .font(.caption2).foregroundStyle(.secondary)
-            }
-            if maxCount < 4 {
-                Text("This screen is too small for more than \(maxCount) windows in this layout.")
-                    .font(.caption2).foregroundStyle(.secondary)
             }
         }
     }

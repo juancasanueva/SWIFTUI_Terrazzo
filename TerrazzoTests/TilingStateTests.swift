@@ -935,4 +935,42 @@ struct TilingStateTests {
         _ = state.reconcile(snapshot([2]), context: context())
         #expect(state.workspaces[left]?.zoomed == nil)
     }
+
+    @Test func aWorkspaceWithNoChoicesShowsTheDefaults() {
+        var policy = TilingPolicy(gap: 0)
+        policy.kind = .columns
+        policy.kindIsChosen = true
+        policy.count = 2
+        let choice = TilingState().layoutChoice(Workspace(), area: leftArea, policy: policy)
+        #expect(choice.kind == .columns)
+        #expect(choice.count == 2)
+        #expect(choice.followsDefaults)
+    }
+
+    @Test func aWorkspaceChoiceWinsOverTheDefaults() {
+        var workspace = Workspace()
+        workspace.kind = .columns
+        workspace.count = 2
+        let choice = TilingState().layoutChoice(workspace, area: leftArea, policy: TilingPolicy(gap: 0))
+        #expect(choice.kind == .columns)
+        #expect(choice.count == 2)
+        #expect(!choice.followsDefaults)
+    }
+
+    @Test func anAutomaticLayoutOnAVerticalScreenShowsRows() {
+        let tall = CGRect(x: 0, y: 0, width: 1080, height: 1920)
+        let choice = TilingState().layoutChoice(Workspace(), area: tall, policy: TilingPolicy(gap: 0))
+        #expect(choice.kind == .rows)
+        #expect(choice.isVertical)
+    }
+
+    @Test func theCountShownNeverPassesWhatTheScreenFits() {
+        var workspace = Workspace()
+        workspace.count = 5
+        let small = CGRect(x: 0, y: 0, width: 800, height: 600)
+        let policy = TilingPolicy(gap: 0)
+        let choice = TilingState().layoutChoice(workspace, area: small, policy: policy)
+        #expect(choice.maxCount == LayoutEngine.maxCount(kind: .grid, area: small, gap: 0))
+        #expect(choice.count == min(5, choice.maxCount))
+    }
 }
