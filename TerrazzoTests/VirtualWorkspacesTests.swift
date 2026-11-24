@@ -154,27 +154,27 @@ struct VirtualWorkspacesTests {
 
     @Test func aNewWindowOfTheAppInUseJoinsTheWorkspaceInUse() {
         let target = working("ghostty").destination(
-            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            ofNewWindowFrom: "ghostty", frontmostApp: nil, landedOn: otherDisplayKey, emptyWorkspace: nil,
             showing: [workingKey, otherDisplayKey])
         #expect(target == workingKey)
     }
 
     @Test func aNewWindowOfAnotherAppStaysWhereItLanded() {
         let target = working("ghostty").destination(
-            ofNewWindowFrom: "safari", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            ofNewWindowFrom: "safari", frontmostApp: nil, landedOn: otherDisplayKey, emptyWorkspace: nil,
             showing: [workingKey, otherDisplayKey])
         #expect(target == otherDisplayKey)
     }
 
     @Test func aNewWindowStaysWhereItLandedWhenTheWorkspaceInUseIsNotShowing() {
         let target = working("ghostty").destination(
-            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: nil, showing: [otherDisplayKey])
+            ofNewWindowFrom: "ghostty", frontmostApp: nil, landedOn: otherDisplayKey, emptyWorkspace: nil, showing: [otherDisplayKey])
         #expect(target == otherDisplayKey)
     }
 
     @Test func aNewWindowStaysWhereItLandedBeforeAnyWindowWasFocused() {
         let target = WorkingWorkspace().destination(
-            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            ofNewWindowFrom: "ghostty", frontmostApp: nil, landedOn: otherDisplayKey, emptyWorkspace: nil,
             showing: [workingKey, otherDisplayKey])
         #expect(target == otherDisplayKey)
     }
@@ -182,9 +182,31 @@ struct VirtualWorkspacesTests {
     @Test func aNewWindowOfTheAppInUseJoinsTheEmptyWorkspaceTheUserWentTo() {
         let empty = WorkspaceKey(display: "B", space: 1, virtual: 4)
         let target = working("ghostty").destination(
-            ofNewWindowFrom: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: empty,
+            ofNewWindowFrom: "ghostty", frontmostApp: nil, landedOn: otherDisplayKey, emptyWorkspace: empty,
             showing: [empty, otherDisplayKey])
         #expect(target == empty)
+    }
+
+    @Test func aNewWindowOfTheAppJustLaunchedJoinsTheWorkspaceInUse() {
+        let target = working("ghostty").destination(
+            ofNewWindowFrom: "safari", frontmostApp: "safari", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            showing: [workingKey, otherDisplayKey])
+        #expect(target == workingKey)
+    }
+
+    @Test func aNewWindowOfTheAppJustLaunchedJoinsTheEmptyWorkspaceTheUserWentTo() {
+        let empty = WorkspaceKey(display: "B", space: 1, virtual: 4)
+        let target = WorkingWorkspace().destination(
+            ofNewWindowFrom: "safari", frontmostApp: "safari", landedOn: otherDisplayKey, emptyWorkspace: empty,
+            showing: [empty, otherDisplayKey])
+        #expect(target == empty)
+    }
+
+    @Test func aNewWindowOfABackgroundAppStaysWhereItLanded() {
+        let target = working("ghostty").destination(
+            ofNewWindowFrom: "safari", frontmostApp: "ghostty", landedOn: otherDisplayKey, emptyWorkspace: nil,
+            showing: [workingKey, otherDisplayKey])
+        #expect(target == otherDisplayKey)
     }
 
     // MARK: Pinned workspaces

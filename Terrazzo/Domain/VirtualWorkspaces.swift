@@ -127,14 +127,15 @@ struct WorkingWorkspace: Equatable {
         self.app = app
     }
 
-    /// Where a window that just appeared belongs. A window of the app in use joins the workspace in use,
-    /// or the empty one the user went to, while it shows; any other window stays where it landed, so an
-    /// app that starts keeps its windows where it puts them.
+    /// Where a window that just appeared belongs. A window of the app in use, or of the frontmost app,
+    /// like one the user just launched, joins the workspace in use, or the empty one the user went to,
+    /// while it shows; any other window, like one an app opens in the background, stays where it landed.
     func destination(
-        ofNewWindowFrom app: String, landedOn landed: WorkspaceKey, emptyWorkspace: WorkspaceKey?,
+        ofNewWindowFrom app: String, frontmostApp: String?, landedOn landed: WorkspaceKey, emptyWorkspace: WorkspaceKey?,
         showing: Set<WorkspaceKey>
     ) -> WorkspaceKey {
-        guard app == self.app, let target = emptyWorkspace ?? key, showing.contains(target) else { return landed }
+        guard app == self.app || app == frontmostApp, let target = emptyWorkspace ?? key, showing.contains(target)
+        else { return landed }
         return target
     }
 }

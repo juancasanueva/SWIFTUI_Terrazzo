@@ -515,6 +515,7 @@ final class AppController {
         let excluded = Set(rules.excluded)
         let showing = Set(context.screens.map(\.key))
         let emptyWorkspace = emptyFocus.display.map(visibleKey)
+        let frontmostApp = focusedOtherApp()
         var windows: [ObservedWindow] = []
         for record in records where record.isTileable && !record.isMinimized && !excluded.contains(record.bundleID) {
             if isParked(record.id, displays: displays) { continue }
@@ -522,7 +523,7 @@ final class AppController {
             // Never seen before: a window restored from the Dock keeps its app and returns where it was.
             if state.apps[record.id] == nil, !state.userFloats.contains(record.id) {
                 key = working.destination(
-                    ofNewWindowFrom: record.bundleID, landedOn: key, emptyWorkspace: emptyWorkspace, showing: showing)
+                    ofNewWindowFrom: record.bundleID, frontmostApp: frontmostApp, landedOn: key, emptyWorkspace: emptyWorkspace, showing: showing)
             }
             windows.append(ObservedWindow(id: record.id, app: record.bundleID, key: key, frame: record.frame))
         }

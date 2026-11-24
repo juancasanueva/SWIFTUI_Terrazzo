@@ -92,7 +92,7 @@ Shortcuts follow a key's physical position, and they apply in every app while Te
 
 ### Workspaces
 
-There are nine numbered workspaces, separate from macOS Spaces. Each monitor shows one, and the others keep their windows parked in a screen corner, where macOS leaves a small sliver visible. Parked windows come back when Terrazzo quits or is paused. A new window from the app you're using, like one opened with ⌘N, joins the workspace you're on, even when the app opens it on another monitor. Windows of an app that's just starting stay where the app puts them. Floating windows and excluded apps stay visible on every workspace. Windows keep their workspace number when a monitor is unplugged: those on a workspace the remaining monitors aren't showing stay parked until you go to that number.
+There are nine numbered workspaces, separate from macOS Spaces. Each monitor shows one, and the others keep their windows parked in a screen corner, where macOS leaves a small sliver visible. Parked windows come back when Terrazzo quits or is paused. A new window from the app you're using, like one opened with ⌘N, or from an app you just launched, from the Dock, Spotlight or a launcher, joins the workspace you're on, even when the app opens it on another monitor. Windows an app opens in the background stay where the app puts them. Floating windows and excluded apps stay visible on every workspace. Windows keep their workspace number when a monitor is unplugged: those on a workspace the remaining monitors aren't showing stay parked until you go to that number.
 
 ## Configuration
 
