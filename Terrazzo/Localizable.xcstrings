@@ -5405,30 +5405,30 @@
         }
       }
     },
-    "Lists the workspaces on this display and the ones not used yet.": {
+    "Number of windows": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muestra los escritorios de esta pantalla y los que aún no se han usado."
+            "value": "Número de ventanas"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このディスプレイのワークスペースと、まだ使っていないワークスペースを表示します。"
+            "value": "ウインドウ数"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 디스플레이의 작업 공간과 아직 사용하지 않은 작업 공간을 표시합니다."
+            "value": "윈도우 수"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "列出此显示器上的工作区以及尚未使用的工作区。"
+            "value": "窗口数"
           }
         }
       }

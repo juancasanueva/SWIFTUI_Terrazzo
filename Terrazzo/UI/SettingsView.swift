@@ -208,21 +208,36 @@ struct WorkspaceLayoutsSection: View {
                 }
             }
             if let display {
+                WorkspaceLayoutHeader()
                 ForEach(controller.workspaceMap.workspaces(on: display.uuid), id: \.self) { number in
                     WorkspaceLayoutRow(controller: controller, key: controller.workspaceKey(number, on: display.uuid))
                 }
             }
         } header: {
             Text("Workspaces")
-        } footer: {
-            Text("Lists the workspaces on this display and the ones not used yet.")
-                .font(.footnote).foregroundStyle(.secondary)
         }
+    }
+}
+
+/// Titles over the layout buttons and the window-count buttons of `WorkspaceLayoutRow`.
+struct WorkspaceLayoutHeader: View {
+    var body: some View {
+        HStack {
+            Color.clear.frame(width: WorkspaceLayoutRow.labelWidth, height: 1)
+            Text("Layout")
+            Spacer()
+            Text("Number of windows")
+        }
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .accessibilityHidden(true)
     }
 }
 
 /// One workspace: its number, whether it is showing or still on the defaults, then its layout and window count.
 struct WorkspaceLayoutRow: View {
+    static let labelWidth: CGFloat = 130
+
     let controller: AppController
     let key: WorkspaceKey
 
@@ -242,7 +257,7 @@ struct WorkspaceLayoutRow: View {
                         Text("Uses the defaults").font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                .frame(width: 130, alignment: .leading)
+                .frame(width: Self.labelWidth, alignment: .leading)
                 LayoutChoiceControls(
                     choice: choice,
                     onKind: { controller.setKind($0, on: key) },
