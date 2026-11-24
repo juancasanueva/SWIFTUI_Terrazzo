@@ -5321,34 +5321,6 @@
         }
       }
     },
-    "Each workspace keeps its own layout on each display.": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cada escritorio guarda su propia disposición en cada pantalla."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "各ワークスペースは、ディスプレイごとに独自のレイアウトを保持します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "각 작업 공간은 디스플레이마다 고유한 레이아웃을 유지합니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每个工作区在每台显示器上都有自己的布局。"
-          }
-        }
-      }
-    },
     "Showing now": {
       "localizations": {
         "es": {
@@ -5429,6 +5401,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示器"
+          }
+        }
+      }
+    },
+    "Lists the workspaces on this display and the ones not used yet.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra los escritorios de esta pantalla y los que aún no se han usado."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このディスプレイのワークスペースと、まだ使っていないワークスペースを表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 디스플레이의 작업 공간과 아직 사용하지 않은 작업 공간을 표시합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列出此显示器上的工作区以及尚未使用的工作区。"
           }
         }
       }

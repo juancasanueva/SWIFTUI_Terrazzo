@@ -208,14 +208,14 @@ struct WorkspaceLayoutsSection: View {
                 }
             }
             if let display {
-                ForEach(Array(VirtualWorkspaces.numbers), id: \.self) { number in
+                ForEach(controller.workspaceMap.workspaces(on: display.uuid), id: \.self) { number in
                     WorkspaceLayoutRow(controller: controller, key: controller.workspaceKey(number, on: display.uuid))
                 }
             }
         } header: {
             Text("Workspaces")
         } footer: {
-            Text("Each workspace keeps its own layout on each display.")
+            Text("Lists the workspaces on this display and the ones not used yet.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
     }

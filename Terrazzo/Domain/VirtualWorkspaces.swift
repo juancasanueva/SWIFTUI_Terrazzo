@@ -31,6 +31,12 @@ struct VirtualWorkspaces: Equatable {
         pinnedDisplay(of: number) ?? homes[number].flatMap { connected.contains($0) ? $0 : nil }
     }
 
+    /// The workspaces a display holds: those pinned or last used there, plus those not tied to a connected
+    /// display, which open wherever they are used next.
+    func workspaces(on display: String) -> [Int] {
+        Self.numbers.filter { home(of: $0).map { $0 == display } ?? true }
+    }
+
     var savedVisible: [String: Int] { visible.merging(remembered) { current, _ in current } }
 
     var savedHomes: [String: String] {

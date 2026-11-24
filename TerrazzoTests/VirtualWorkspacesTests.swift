@@ -715,4 +715,19 @@ struct VirtualWorkspacesTests {
         #expect(ScreensFile.fallbackID(one) != ScreensFile.id(one))
         #expect(ScreensFile.fallbackID(three) == "A#workspace#3")
     }
+
+    @Test func aDisplayListsItsOwnWorkspacesAndTheUnusedOnes() {
+        var map = synced(["A", "B"])
+        map.setPins([5: "B", 6: "B"])
+        _ = map.show(3, focusedDisplay: "A", isEmpty: true)
+        #expect(map.workspaces(on: "A") == [1, 3, 4, 7, 8, 9])
+        #expect(map.workspaces(on: "B") == [2, 4, 5, 6, 7, 8, 9])
+    }
+
+    @Test func aWorkspaceHomeOnADisconnectedDisplayIsListedEverywhere() {
+        var map = synced(["A", "B"])
+        _ = map.show(5, focusedDisplay: "B", isEmpty: true)
+        map.sync(displays: ["A"])
+        #expect(map.workspaces(on: "A").contains(5))
+    }
 }
