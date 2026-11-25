@@ -93,29 +93,41 @@ final class AXWindowSystem {
             AXUIElementSetMessagingTimeout(window, Self.messagingTimeout)
             var id: CGWindowID = 0
             guard axElementGetWindow(window, &id) == .success, id != 0 else { return nil }
-            guard let frame = Self.frame(of: window) ?? known.first(where: { $0.id == id })?.frame else {
-                return nil
-            }
+            let last = known.first { $0.id == id }
+            guard let frame = Self.frame(of: window) ?? last?.frame else { return nil }
             let isMinimized = (Self.attribute(window, kAXMinimizedAttribute) as Bool?) ?? false
             observeDestruction(of: window, id: id, pid: app.processIdentifier)
             return WindowRecord(
                 id: id, element: window, pid: app.processIdentifier, bundleID: bundleID, appName: appName,
-                frame: frame, isMinimized: isMinimized, isTileable: Self.isStandard(window))
+                frame: frame, isMinimized: isMinimized,
+                isTileable: WindowClassification.isTileable(read: Self.isStandard(window), known: last?.isTileable))
         }
     }
 
-    /// A standard window: title bar, the three buttons, resizable, not full-screen.
-    private static func isStandard(_ window: AXUIElement) -> Bool {
-        guard (attribute(window, kAXRoleAttribute) as String?) == kAXWindowRole,
-            (attribute(window, kAXSubroleAttribute) as String?) == kAXStandardWindowSubrole,
-            (attribute(window, "AXFullScreen") as Bool?) != true,
-            (attribute(window, kAXCloseButtonAttribute) as AXUIElement?) != nil,
-            (attribute(window, kAXMinimizeButtonAttribute) as AXUIElement?) != nil,
-            (attribute(window, kAXZoomButtonAttribute) as AXUIElement?) != nil
-        else { return false }
-        var settable = DarwinBoolean(false)
-        AXUIElementIsAttributeSettable(window, kAXSizeAttribute as CFString, &settable)
-        return settable.boolValue
+    /// A standard window: title bar, the three buttons, resizable, not full-screen. Nil when the app
+    /// didn't answer in time.
+    private static func isStandard(_ window: AXUIElement) -> Bool? {
+        WindowClassification.combine([
+            { check(window, kAXRoleAttribute) { (role: String?) in role == kAXWindowRole } },
+            { check(window, kAXSubroleAttribute) { (subrole: String?) in subrole == kAXStandardWindowSubrole } },
+            { check(window, "AXFullScreen") { (fullScreen: Bool?) in fullScreen != true } },
+            { check(window, kAXCloseButtonAttribute) { (button: AXUIElement?) in button != nil } },
+            { check(window, kAXMinimizeButtonAttribute) { (button: AXUIElement?) in button != nil } },
+            { check(window, kAXZoomButtonAttribute) { (button: AXUIElement?) in button != nil } },
+            {
+                var settable = DarwinBoolean(false)
+                let status = AXUIElementIsAttributeSettable(window, kAXSizeAttribute as CFString, &settable)
+                return status == .cannotComplete ? nil : settable.boolValue
+            },
+        ])
+    }
+
+    /// Tests one attribute, missing or not; nil when the app didn't answer in time.
+    private static func check<T>(_ element: AXUIElement, _ name: String, _ test: (T?) -> Bool) -> Bool? {
+        var value: CFTypeRef?
+        let status = AXUIElementCopyAttributeValue(element, name as CFString, &value)
+        if status == .cannotComplete { return nil }
+        return test(status == .success ? value as? T : nil)
     }
 
     func focusedWindow() -> WindowID? {
