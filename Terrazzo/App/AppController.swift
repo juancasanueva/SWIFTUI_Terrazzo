@@ -853,13 +853,19 @@ final class AppController {
 
         for placement in plan.placements {
             guard let live = ax.currentFrame(of: placement.id) else { continue }
-            if Self.close(live, placement.frame) { continue }
+            if Self.close(live, placement.frame) {
+                refusals.forget(placement.id)
+                continue
+            }
             if let last = lastApplied[placement.id], last.requested == placement.frame,
                 Self.close(live, last.accepted) {
                 continue  // The app already refused this exact frame.
             }
-            guard let accepted = ax.setFrame(placement.id, to: placement.frame) else { continue }
-            lastApplied[placement.id] = (placement.frame, accepted)
+            // An app too busy to report the new frame counts as not having moved yet. Nothing is remembered
+            // as refused, so the next pass asks again.
+            let readBack = ax.setFrame(placement.id, to: placement.frame)
+            let accepted = readBack ?? live
+            if readBack != nil { lastApplied[placement.id] = (placement.frame, accepted) }
             moved += 1
             if learnMinimum(
                 id: placement.id, requested: placement.frame, accepted: accepted, previous: live, context: context)

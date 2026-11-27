@@ -74,12 +74,94 @@ struct RefusalTrackerTests {
 
     @Test func nearlyTheWholeScreenIsNeverAMinimum() {
         var tracker = RefusalTracker()
-        for seconds in [0.0, 0.3, 3, 10] {
-            let verdict = tracker.note(
-                id: 1, requested: frame(1700), accepted: frame(3410), previous: frame(1000), area: area,
-                now: start.addingTimeInterval(seconds))
-            #expect(verdict == .none)
+        var verdicts: [RefusalTracker.Verdict] = []
+        for seconds in [0.0, 0.3, RefusalTracker.patience + 0.1] {
+            verdicts.append(
+                tracker.note(
+                    id: 1, requested: frame(1700), accepted: frame(3410), previous: frame(1000), area: area,
+                    now: start.addingTimeInterval(seconds)))
         }
+        // A window not resized yet: looked at again, never learned, left alone once patience runs out.
+        #expect(
+            verdicts == [
+                .checkAgain(after: RefusalTracker.quickRetry), .checkAgain(after: RefusalTracker.quickRetry), .none,
+            ])
+    }
+
+    @Test func aWindowThatHasNotGrownYetIsCheckedAgain() {
+        var tracker = RefusalTracker()
+        let verdict = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area, now: start)
+        #expect(verdict == .checkAgain(after: RefusalTracker.quickRetry))
+    }
+
+    @Test func aWindowThatNeverGrowsIsLeftAloneOncePatienceRunsOut() {
+        var tracker = RefusalTracker()
+        let first = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area, now: start)
+        let second = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area,
+            now: start.addingTimeInterval(1))
+        let last = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area,
+            now: start.addingTimeInterval(RefusalTracker.patience + 0.1))
+        #expect(first == .checkAgain(after: RefusalTracker.quickRetry))
+        #expect(second == .checkAgain(after: RefusalTracker.quickRetry))
+        #expect(last == .none)
+    }
+
+    @Test func aWindowThatGrowsLateStartsAFreshWaitNextTime() {
+        var tracker = RefusalTracker()
+        _ = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area, now: start)
+        let grown = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(1694), previous: frame(888), area: area,
+            now: start.addingTimeInterval(0.3))
+        let later = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area,
+            now: start.addingTimeInterval(RefusalTracker.patience + 1))
+        #expect(grown == .none)
+        #expect(later == .checkAgain(after: RefusalTracker.quickRetry))
+    }
+
+    @Test func aWindowSeenInPlaceStartsAFreshWaitNextTime() {
+        var tracker = RefusalTracker()
+        _ = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area, now: start)
+        // It grew without being asked again, so only its placement saw it in place.
+        tracker.forget(1)
+        let later = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area,
+            now: start.addingTimeInterval(60))
+        #expect(later == .checkAgain(after: RefusalTracker.quickRetry))
+    }
+
+    @Test func forgettingOneWindowKeepsAnotherWaiting() {
+        var tracker = RefusalTracker()
+        _ = tracker.note(
+            id: 1, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area, now: start)
+        _ = tracker.note(
+            id: 2, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area, now: start)
+        tracker.forget(1)
+        let other = tracker.note(
+            id: 2, requested: frame(1694), accepted: frame(888), previous: frame(888), area: area,
+            now: start.addingTimeInterval(RefusalTracker.patience + 0.1))
+        #expect(other == .none)
+    }
+
+    @Test func gridRoundingDownIsNotAWindowLeftBehind() {
+        var tracker = RefusalTracker()
+        let verdict = tracker.note(
+            id: 1, requested: frame(800), accepted: frame(785), previous: frame(1700), area: area, now: start)
+        #expect(verdict == .none)
+    }
+
+    @Test func aWindowThatHasNotGrownTallerYetIsCheckedAgain() {
+        var tracker = RefusalTracker()
+        let verdict = tracker.note(
+            id: 1, requested: frame(800, 1360), accepted: frame(800, 673), previous: frame(800, 673), area: area,
+            now: start)
+        #expect(verdict == .checkAgain(after: RefusalTracker.quickRetry))
     }
 
     @Test func heightIsJudgedOnItsOwn() {
