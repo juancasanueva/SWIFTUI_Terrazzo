@@ -28,6 +28,8 @@ struct RefusalTracker {
     static let implausibleShare: CGFloat = 0.9
 
     private var sightings: [WindowID: Sighting] = [:]
+    /// Windows still showing an old size, and since when.
+    private var waiting: [WindowID: Date] = [:]
 
     mutating func note(
         id: WindowID, requested: CGRect, accepted: CGRect, previous: CGRect, area: CGRect, now: Date
@@ -37,10 +39,13 @@ struct RefusalTracker {
         let implausible =
             (refusedWidth && accepted.width >= area.width * Self.implausibleShare)
             || (refusedHeight && accepted.height >= area.height * Self.implausibleShare)
+        let short =
+            accepted.width < requested.width - Self.tolerance || accepted.height < requested.height - Self.tolerance
         guard refusedWidth || refusedHeight, !implausible else {
             sightings[id] = nil
-            return .none
+            return short || implausible ? notResizedYet(id, now: now) : settled(id)
         }
+        waiting[id] = nil
         let size = CGSize(width: refusedWidth ? accepted.width : 0, height: refusedHeight ? accepted.height : 0)
 
         if let seen = sightings[id], abs(seen.accepted.width - accepted.width) < 2,
@@ -55,5 +60,26 @@ struct RefusalTracker {
         let moved = abs(accepted.width - previous.width) >= 2 || abs(accepted.height - previous.height) >= 2
         sightings[id] = Sighting(accepted: accepted.size, firstSeen: now, clamped: moved)
         return .checkAgain(after: moved ? Self.quickRetry : Self.slowRetry)
+    }
+
+    /// The window is where it should be, so whatever it showed before is over. A window that catches up
+    /// isn't noted again, and its old wait would otherwise make the next one give up at once.
+    mutating func forget(_ id: WindowID) {
+        waiting[id] = nil
+        sightings[id] = nil
+    }
+
+    /// A busy app can answer with the old size, often a window that should grow into the room another one
+    /// left. Remembering that as refused would leave it there, so it is asked again until patience runs out.
+    private mutating func notResizedYet(_ id: WindowID, now: Date) -> Verdict {
+        let since = waiting[id] ?? now
+        guard now.timeIntervalSince(since) < Self.patience else { return settled(id) }
+        waiting[id] = since
+        return .checkAgain(after: Self.quickRetry)
+    }
+
+    private mutating func settled(_ id: WindowID) -> Verdict {
+        waiting[id] = nil
+        return .none
     }
 }
